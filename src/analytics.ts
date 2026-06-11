@@ -114,6 +114,65 @@ export function filterDays(events: UsageEvent[], days: number, now = new Date())
   })
 }
 
+// ── session drill-down ────────────────────────────────────────────────────────
+
+export interface SessionSummary {
+  sessionId: string
+  agent: string
+  /** Most frequent project within the session. */
+  project: string
+  start: string
+  end: string
+  /** Wall-clock span in minutes (first to last event). */
+  minutes: number
+  turns: number
+  tokens: number
+  cost: number
+}
+
+/** Per-session rollup, sorted by cost desc — "which sessions ate my budget". */
+export function bySession(events: UsageEvent[]): SessionSummary[] {
+  const map = new Map<string, { s: SessionSummary; projects: Map<string, number> }>()
+  for (const e of events) {
+    const key = `${e.agent}:${e.sessionId}`
+    let entry = map.get(key)
+    if (!entry) {
+      entry = {
+        s: {
+          sessionId: e.sessionId,
+          agent: e.agent,
+          project: e.project,
+          start: e.timestamp,
+          end: e.timestamp,
+          minutes: 0,
+          turns: 0,
+          tokens: 0,
+          cost: 0,
+        },
+        projects: new Map(),
+      }
+      map.set(key, entry)
+    }
+    const { s, projects } = entry
+    if (e.timestamp) {
+      if (!s.start || e.timestamp < s.start) s.start = e.timestamp
+      if (e.timestamp > s.end) s.end = e.timestamp
+    }
+    s.turns++
+    s.tokens += e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
+    s.cost += eventCost(e) ?? 0
+    projects.set(e.project, (projects.get(e.project) ?? 0) + 1)
+  }
+  const out: SessionSummary[] = []
+  for (const { s, projects } of map.values()) {
+    s.project = [...projects.entries()].sort((a, b) => b[1] - a[1])[0][0]
+    const span = new Date(s.end).getTime() - new Date(s.start).getTime()
+    s.minutes = isNaN(span) ? 0 : Math.round(span / 60_000)
+    out.push(s)
+  }
+  return out.sort((a, b) => b.cost - a.cost)
+}
+
 // ── budget burn-down (the soft-limit IC view) ─────────────────────────────────
 
 export interface BudgetStatus {

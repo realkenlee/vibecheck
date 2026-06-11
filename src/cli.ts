@@ -14,6 +14,8 @@ import {
   byAgent,
   byBranch,
   byDay,
+  bySession,
+  localDay,
   toolUsage,
   hourlyHistogram,
   filterDays,
@@ -25,7 +27,7 @@ import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
-  command: 'report' | 'export'
+  command: 'report' | 'export' | 'sessions'
   json: boolean
   days: number | null
   budget: number | null
@@ -51,7 +53,7 @@ function parseArgs(argv: string[]): Args {
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (i === 0 && v === 'export') a.command = 'export'
+    if (i === 0 && (v === 'export' || v === 'sessions')) a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
     else if (v === '--budget') a.budget = parseFloat(argv[++i])
@@ -64,6 +66,7 @@ function parseArgs(argv: string[]): Args {
       console.log(`vibevitals — where do your AI coding tokens go?
 
 Usage: vibevitals [options]            personal report (human-readable)
+       vibevitals sessions [options]   most expensive sessions
        vibevitals export [options]     aggregates-only team report (JSON)
 
 Options
@@ -109,6 +112,41 @@ function main() {
     } else {
       console.log(json)
     }
+    return
+  }
+
+  if (args.command === 'sessions') {
+    const sessions = bySession(events)
+    if (args.json) {
+      console.log(JSON.stringify(sessions, null, 2))
+      return
+    }
+    console.log()
+    console.log(bold('  🩺 vibevitals — sessions') + dim(`  ·  ${args.days ? `last ${args.days} days` : 'all time'}  ·  by cost`))
+    console.log()
+    if (sessions.length === 0) {
+      console.log('  No sessions found.')
+      return
+    }
+    console.log(
+      indent(
+        table(
+          sessions.slice(0, 15).map((s) => [
+            dim(localDay(s.start)),
+            s.project,
+            cyan(s.agent),
+            s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`,
+            String(s.turns),
+            tokens(s.tokens),
+            bold(money(s.cost)),
+          ]),
+          ['date', 'project', 'agent', 'span', 'turns', 'tokens', 'cost'],
+        ),
+      ),
+    )
+    console.log()
+    console.log(dim(`  ${sessions.length} sessions total · top 15 shown · use --json for all`))
+    console.log()
     return
   }
 

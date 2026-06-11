@@ -1,5 +1,7 @@
 # 🩺 vibevitals
 
+[![ci](https://github.com/realkenlee/vibevitals/actions/workflows/ci.yml/badge.svg)](https://github.com/realkenlee/vibevitals/actions/workflows/ci.yml)
+
 **Know where your AI coding tokens go.** Local-first analytics for Claude Code and Codex sessions — spend, activities, budget burn-down. Free forever for individuals.
 
 ```
@@ -52,6 +54,7 @@ One normalized report across Claude Code and Codex. More agents coming.
 npx vibevitals                   # full report, all time
 npx vibevitals --days 30         # last 30 days
 npx vibevitals --budget 200      # monthly soft limit → burn-down + projection
+npx vibevitals sessions          # most expensive sessions, span + turns
 npx vibevitals --json            # machine-readable, pipe it anywhere
 ```
 
@@ -116,10 +119,10 @@ npm run dev     # build + run against your own sessions
 - [x] Budget burn-down with month-end projection
 - [x] Branch-level cost attribution
 - [x] Aggregates-only team export
+- [x] Session drill-down (`vibevitals sessions`)
 - [ ] Local web dashboard (`vibevitals --web`)
 - [ ] "AI Coding Wrapped" shareable card (anonymized, opt-in)
 - [ ] Gemini CLI, Cursor, opencode parsers
-- [ ] Per-session drill-down (interruption rate, longest sessions)
 - [ ] vibevitals for Teams (hosted)
 
 ## License

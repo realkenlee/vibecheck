@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { UsageEvent } from '../src/schema.js'
-import { totals, byModel, byDay, toolUsage, hourlyHistogram, filterDays } from '../src/analytics.js'
+import { totals, byModel, byDay, bySession, toolUsage, hourlyHistogram, filterDays } from '../src/analytics.js'
 import { eventCost, cacheSavings, rateFor } from '../src/pricing.js'
 
 const ev = (over: Partial<UsageEvent>): UsageEvent => ({
@@ -15,6 +15,7 @@ const ev = (over: Partial<UsageEvent>): UsageEvent => ({
   cacheWriteTokens: 0,
   toolCalls: [],
   sidechain: false,
+  gitBranch: null,
   ...over,
 })
 
@@ -85,5 +86,29 @@ describe('analytics', () => {
     const now = new Date('2026-06-03T00:00:00.000Z')
     expect(filterDays(events, 1, now)).toHaveLength(0)
     expect(filterDays(events, 3, now)).toHaveLength(3)
+  })
+})
+
+describe('bySession', () => {
+  const events = [
+    ev({ sessionId: 'big', timestamp: '2026-06-01T10:00:00.000Z', outputTokens: 1_000_000, project: 'alpha' }),
+    ev({ sessionId: 'big', timestamp: '2026-06-01T11:30:00.000Z', outputTokens: 1_000_000, project: 'beta' }),
+    ev({ sessionId: 'big', timestamp: '2026-06-01T11:45:00.000Z', outputTokens: 0, project: 'beta' }),
+    ev({ sessionId: 'small', timestamp: '2026-06-02T09:00:00.000Z', outputTokens: 100_000 }),
+    ev({ sessionId: 'small', agent: 'codex', model: 'gpt-5.3-codex', outputTokens: 100_000 }),
+  ]
+
+  it('rolls up per session sorted by cost, keyed by agent+id', () => {
+    const s = bySession(events)
+    expect(s).toHaveLength(3) // claude:big, claude:small, codex:small
+    expect(s[0].sessionId).toBe('big')
+    expect(s[0].turns).toBe(3)
+    expect(s[0].cost).toBeCloseTo(30)
+  })
+
+  it('computes wall-clock span and dominant project', () => {
+    const big = bySession(events)[0]
+    expect(big.minutes).toBe(105) // 10:00 → 11:45
+    expect(big.project).toBe('beta') // 2 of 3 events
   })
 })
