@@ -78,4 +78,13 @@ describe('budget burn-down', () => {
     expect(b.daysInMonth).toBe(30)
     expect(b.projected).toBeCloseTo(90) // $3/day * 30
   })
+
+  it('computes the daily allowance to stay under budget', () => {
+    const b = budgetStatus(june, 100, new Date('2026-06-10T12:00:00'))
+    expect(b.remainingPerDay).toBeCloseTo(3.5) // (100-30)/20 days left
+    const lastDay = budgetStatus(june, 100, new Date('2026-06-30T12:00:00'))
+    expect(lastDay.remainingPerDay).toBeNull()
+    const overspent = budgetStatus(june, 20, new Date('2026-06-10T12:00:00'))
+    expect(overspent.remainingPerDay).toBe(0) // clamped, never negative
+  })
 })

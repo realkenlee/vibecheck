@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { UsageEvent } from '../src/schema.js'
-import { totals, byModel, byDay, bySession, toolUsage, hourlyHistogram, filterDays } from '../src/analytics.js'
+import { totals, byModel, byDay, bySession, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
 import { eventCost, cacheSavings, rateFor } from '../src/pricing.js'
 
 const ev = (over: Partial<UsageEvent>): UsageEvent => ({
@@ -86,6 +86,19 @@ describe('analytics', () => {
     const now = new Date('2026-06-03T00:00:00.000Z')
     expect(filterDays(events, 1, now)).toHaveLength(0)
     expect(filterDays(events, 3, now)).toHaveLength(3)
+  })
+
+  it('filters by calendar month', () => {
+    const mixed = [
+      ev({ timestamp: '2026-05-31T23:00:00.000Z' }),
+      ev({ timestamp: '2026-06-01T10:00:00.000Z' }),
+      ev({ timestamp: 'garbage' }),
+    ]
+    // local-day months (TZ-dependent boundaries handled by localDay)
+    const may = filterMonth(mixed, '2026-05')
+    const june = filterMonth(mixed, '2026-06')
+    expect(may.length + june.length).toBe(2) // garbage never matches
+    expect(filterMonth(mixed, '2026-07')).toHaveLength(0)
   })
 })
 

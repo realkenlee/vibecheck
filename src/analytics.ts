@@ -106,6 +106,11 @@ export function hourlyHistogram(events: UsageEvent[]): number[] {
   return h
 }
 
+/** Keep only events whose local day falls in the given 'YYYY-MM' month. */
+export function filterMonth(events: UsageEvent[], month: string): UsageEvent[] {
+  return events.filter((e) => localDay(e.timestamp).startsWith(month + '-'))
+}
+
 export function filterDays(events: UsageEvent[], days: number, now = new Date()): UsageEvent[] {
   const cutoff = now.getTime() - days * 86_400_000
   return events.filter((e) => {
@@ -186,6 +191,8 @@ export interface BudgetStatus {
   projected: number
   daysElapsed: number
   daysInMonth: number
+  /** What you can spend per remaining day and stay under budget. Null on the last day. */
+  remainingPerDay: number | null
 }
 
 export function budgetStatus(events: UsageEvent[], budget: number, now = new Date()): BudgetStatus {
@@ -196,6 +203,7 @@ export function budgetStatus(events: UsageEvent[], budget: number, now = new Dat
   }
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const daysElapsed = Math.max(1, now.getDate())
+  const daysLeft = daysInMonth - daysElapsed
   return {
     month,
     spent,
@@ -204,5 +212,6 @@ export function budgetStatus(events: UsageEvent[], budget: number, now = new Dat
     projected: (spent / daysElapsed) * daysInMonth,
     daysElapsed,
     daysInMonth,
+    remainingPerDay: daysLeft > 0 ? Math.max(0, (budget - spent) / daysLeft) : null,
   }
 }

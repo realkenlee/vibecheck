@@ -19,6 +19,7 @@ import {
   toolUsage,
   hourlyHistogram,
   filterDays,
+  filterMonth,
   budgetStatus,
 } from './analytics.js'
 import { byActivity } from './activities.js'
@@ -35,6 +36,7 @@ interface Args {
   command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web'
   json: boolean
   days: number | null
+  month: string | null
   budget: number | null
   out: string | null
   anonymous: boolean
@@ -49,6 +51,7 @@ function parseArgs(argv: string[]): Args {
     command: 'report',
     json: false,
     days: null,
+    month: null,
     budget: isNaN(envBudget) ? null : envBudget,
     out: null,
     anonymous: false,
@@ -61,6 +64,13 @@ function parseArgs(argv: string[]): Args {
     if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web')) a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
+    else if (v === '--month') {
+      a.month = argv[++i]
+      if (!/^\d{4}-\d{2}$/.test(a.month ?? '')) {
+        console.error(`--month wants YYYY-MM, got: ${a.month}`)
+        process.exit(1)
+      }
+    }
     else if (v === '--budget') a.budget = parseFloat(argv[++i])
     else if (v === '--out') a.out = argv[++i]
     else if (v === '--anonymous') a.anonymous = true
@@ -78,6 +88,7 @@ Usage: vibevitals [options]            personal report (human-readable)
 
 Options
   --days <n>           only include the last n days
+  --month <YYYY-MM>    only include one calendar month (reconciliation)
   --budget <usd>       monthly soft limit — burn-down + projection
                        (or set VIBEVITALS_BUDGET)
   --json               machine-readable output (report mode)
@@ -104,6 +115,7 @@ function main() {
   const codex = parseCodexDir(args.codexDir)
   let events: UsageEvent[] = [...claude.events, ...codex.events]
   if (args.days) events = filterDays(events, args.days)
+  if (args.month) events = filterMonth(events, args.month)
 
   if (args.command === 'export') {
     const report = teamReport(events, {
@@ -218,7 +230,7 @@ function main() {
   }
 
   const t = totals(events)
-  const period = args.days ? `last ${args.days} days` : 'all time'
+  const period = args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'
 
   console.log()
   console.log(bold('  🩺 vibevitals') + dim(`  ·  ${period}  ·  all data stays local`))
@@ -257,7 +269,10 @@ function main() {
         `   ${bold(money(b.spent))} of ${money(b.budget)}  ` +
         paint(`▕${bar}▏ ${pct}%`) +
         dim(`   day ${b.daysElapsed}/${b.daysInMonth} · projected `) +
-        (overPace ? yellow(`${money(b.projected)} ⚠ over pace`) : green(`${money(b.projected)} on pace`)),
+        (overPace ? yellow(`${money(b.projected)} ⚠ over pace`) : green(`${money(b.projected)} on pace`)) +
+        (b.remainingPerDay !== null && b.spent < b.budget
+          ? dim(` · ≤ ${money(b.remainingPerDay)}/day to stay under`)
+          : ''),
     )
     console.log()
   }
