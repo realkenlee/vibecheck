@@ -25,6 +25,7 @@ import {
 } from './analytics.js'
 import { byActivity } from './activities.js'
 import { PRICES_AS_OF } from './pricing.js'
+import { VERSION } from './version.js'
 import { teamReport } from './export.js'
 import { diagnose } from './insights.js'
 import { wrappedStats, wrappedSvg } from './wrapped.js'
@@ -93,6 +94,10 @@ function parseArgs(argv: string[]): Args {
     else if (v === '--include-projects') a.includeProjects = true
     else if (v === '--claude-dir') a.claudeDir = argv[++i]
     else if (v === '--codex-dir') a.codexDir = argv[++i]
+    else if (v === '--version' || v === '-v') {
+      console.log(`vibevitals ${VERSION}`)
+      process.exit(0)
+    }
     else if (v === '--help' || v === '-h') {
       console.log(`vibevitals — where do your AI coding tokens go?
 
@@ -111,6 +116,7 @@ Options
   --json               machine-readable output (report mode)
   --claude-dir <p>     Claude Code projects dir (default ~/.claude/projects)
   --codex-dir <p>      Codex sessions dir (default ~/.codex/sessions)
+  --version            print version and exit
 
 Export options (what you share is your call — read the payload first)
   --out <file>         write the report to a file instead of stdout
