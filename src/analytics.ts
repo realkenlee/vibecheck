@@ -79,6 +79,14 @@ export function byDay(events: UsageEvent[]): Bucket[] {
   )
 }
 
+/** Buckets keyed by local month YYYY-MM, sorted ascending — the MoM trend. */
+export function byMonth(events: UsageEvent[]): Bucket[] {
+  return bucketBy(events, (e) => {
+    const d = localDay(e.timestamp)
+    return d === 'unknown' ? d : d.slice(0, 7)
+  }).sort((a, b) => a.key.localeCompare(b.key))
+}
+
 export function localDay(iso: string): string {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return 'unknown'

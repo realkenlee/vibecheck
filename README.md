@@ -69,6 +69,7 @@ no dependencies, one artifact to checksum and allowlist.
 npx vibevitals                   # full report, all time
 npx vibevitals --days 30         # last 30 days
 npx vibevitals --month 2026-05   # one calendar month (reconciliation)
+npx vibevitals months            # month-over-month trend with Δ%
 npx vibevitals --budget 200      # monthly soft limit → burn-down + projection
 npx vibevitals sessions          # most expensive sessions, span + turns
 npx vibevitals wrapped --out wrapped.svg   # shareable card (aggregates only)

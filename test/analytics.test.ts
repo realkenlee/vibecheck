@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { UsageEvent } from '../src/schema.js'
-import { totals, byModel, byDay, bySession, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
+import { totals, byModel, byDay, byMonth, bySession, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
 import { eventCost, cacheSavings, rateFor } from '../src/pricing.js'
 
 const ev = (over: Partial<UsageEvent>): UsageEvent => ({
@@ -86,6 +86,17 @@ describe('analytics', () => {
     const now = new Date('2026-06-03T00:00:00.000Z')
     expect(filterDays(events, 1, now)).toHaveLength(0)
     expect(filterDays(events, 3, now)).toHaveLength(3)
+  })
+
+  it('buckets by month ascending, unknowns isolated', () => {
+    const b = byMonth([
+      ev({ timestamp: '2026-05-20T10:00:00.000Z', outputTokens: 1000 }),
+      ev({ timestamp: '2026-06-02T10:00:00.000Z', outputTokens: 2000 }),
+      ev({ timestamp: '2026-06-15T10:00:00.000Z', outputTokens: 3000 }),
+      ev({ timestamp: 'garbage' }),
+    ])
+    expect(b.map((x) => x.key)).toEqual(['2026-05', '2026-06', 'unknown'])
+    expect(b[1].events).toBe(2)
   })
 
   it('filters by calendar month', () => {

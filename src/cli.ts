@@ -14,6 +14,7 @@ import {
   byAgent,
   byBranch,
   byDay,
+  byMonth,
   bySession,
   localDay,
   toolUsage,
@@ -33,7 +34,7 @@ import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
-  command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web'
+  command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months'
   json: boolean
   days: number | null
   month: string | null
@@ -61,7 +62,8 @@ function parseArgs(argv: string[]): Args {
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web')) a.command = v
+    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months'))
+      a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
     else if (v === '--month') {
@@ -82,6 +84,7 @@ function parseArgs(argv: string[]): Args {
 
 Usage: vibevitals [options]            personal report (human-readable)
        vibevitals sessions [options]   most expensive sessions
+       vibevitals months               month-over-month trend
        vibevitals wrapped [options]    shareable card (--out wrapped.svg)
        vibevitals web [options]        static HTML dashboard (no server)
        vibevitals export [options]     aggregates-only team report (JSON)
@@ -131,6 +134,42 @@ function main() {
     } else {
       console.log(json)
     }
+    return
+  }
+
+  if (args.command === 'months') {
+    const months = byMonth(events).filter((m) => m.key !== 'unknown')
+    if (args.json) {
+      console.log(JSON.stringify(months, null, 2))
+      return
+    }
+    console.log()
+    console.log(bold('  🩺 vibevitals — months') + dim('  ·  month-over-month'))
+    console.log()
+    if (months.length === 0) {
+      console.log('  No sessions found.')
+      return
+    }
+    console.log(
+      indent(
+        table(
+          months.map((m, i) => {
+            const prev = i > 0 ? months[i - 1].cost : null
+            const delta =
+              prev && prev > 0.01
+                ? (() => {
+                    const d = Math.round(((m.cost - prev) / prev) * 100)
+                    const s = `${d >= 0 ? '+' : ''}${d}%`
+                    return d > 0 ? yellow(s) : green(s)
+                  })()
+                : dim('—')
+            return [m.key, String(m.events), tokens(m.tokens), money(m.cost), delta]
+          }),
+          ['month', 'calls', 'tokens', 'cost', 'Δ'],
+        ),
+      ),
+    )
+    console.log()
     return
   }
 
