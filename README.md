@@ -53,6 +53,16 @@ One normalized report across Claude Code and Codex. More agents coming.
 
 **Everything runs locally. Nothing leaves your machine.** No telemetry, no accounts, no uploads. It's a read-only parser over files you already have. Prompt and code content is never parsed — only token counts, models, tool names, and timestamps.
 
+## Install
+
+```bash
+npx vibevitals        # zero-install — if you run Claude Code, you already have Node
+```
+
+No Node? Locked-down laptop? Grab a **single-file executable** from
+[Releases](../../releases) (macOS arm64/x64, Linux x64/arm64, Windows) — no runtime,
+no dependencies, one artifact to checksum and allowlist.
+
 ## Usage
 
 ```bash

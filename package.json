@@ -25,6 +25,7 @@
     "build": "tsc",
     "test": "vitest run",
     "dev": "tsc && node dist/cli.js",
+    "compile": "tsc && bun build --compile --minify dist/cli.js --outfile vibevitals",
     "prepublishOnly": "npm test && npm run build"
   },
   "keywords": [

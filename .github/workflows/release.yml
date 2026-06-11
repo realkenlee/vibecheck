@@ -1,0 +1,53 @@
+name: release
+
+# Tag v* → build single-file executables for every platform and attach them
+# to a GitHub Release. This is the no-Node distribution path: one static
+# artifact per platform, checksummed — what locked-down enterprise laptops
+# and artifact proxies want.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Compile single-file executables
+        run: |
+          mkdir -p release
+          for target in bun-darwin-arm64 bun-darwin-x64 bun-linux-x64 bun-linux-arm64 bun-windows-x64; do
+            suffix="${target#bun-}"
+            out="release/vibevitals-${suffix}"
+            [ "$suffix" = "windows-x64" ] && out="${out}.exe"
+            bun build --compile --minify --target="$target" dist/cli.js --outfile "$out"
+          done
+          ls -lh release/
+
+      - name: Smoke-test the linux binary
+        run: ./release/vibevitals-linux-x64 --claude-dir /tmp/nope --codex-dir /tmp/nope
+
+      - name: Checksums
+        run: cd release && shasum -a 256 * > SHA256SUMS
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release/* \
+            --title "vibevitals ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --notes "Single-file executables — no Node/npm required. Verify with SHA256SUMS. Or just: \`npx vibevitals\`"
