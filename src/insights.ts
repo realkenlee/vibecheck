@@ -2,7 +2,7 @@
 // deterministic, threshold-gated, and only fires with enough data to matter.
 
 import type { UsageEvent } from './schema.js'
-import { eventCost } from './pricing.js'
+import { eventCost, rateFor } from './pricing.js'
 import { totals, bySession, hourlyHistogram } from './analytics.js'
 import { classifyEvent, type Activity } from './activities.js'
 
@@ -41,6 +41,20 @@ export function diagnose(events: UsageEvent[]): Insight[] {
         text: `Low cache hit rate (${pct(hitRate)}). Frequent session restarts or >5min idle gaps break the prompt cache — cached input costs 10% of fresh.`,
       })
     }
+  }
+
+  // 1b. Cache thrash — writes cost a 1.25× premium; if reads never recoup it,
+  // caching is a net loss (short sessions / >5min gaps write cache nobody reads).
+  let writeCost = 0
+  for (const e of events) {
+    const r = rateFor(e.model)
+    if (r) writeCost += (e.cacheWriteTokens * r.cacheWrite) / 1_000_000
+  }
+  if (writeCost > 1 && writeCost > t.cacheSavings) {
+    out.push({
+      level: 'warn',
+      text: `Cache thrash: writing to cache cost ${usd(writeCost)} (1.25× input rate) but reads only saved ${usd(t.cacheSavings)}. Short sessions and >5min idle gaps pay the write premium without the payoff.`,
+    })
   }
 
   // 2. Activity skews (cost-weighted).

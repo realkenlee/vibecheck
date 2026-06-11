@@ -9,6 +9,7 @@ import {
   byProject,
   byBranch,
   byDay,
+  byMonth,
   bySession,
   toolUsage,
   hourlyHistogram,
@@ -58,6 +59,7 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
   const maxHour = Math.max(...hours, 1)
   const notes = diagnose(events)
   const sessions = bySession(events).slice(0, 15)
+  const months = byMonth(events).filter((m) => m.key !== 'unknown')
   const branches = byBranch(events).filter((b) => b.key !== '(unknown)')
   const budget = opts.budget ? budgetStatus(events, opts.budget, opts.now) : null
 
@@ -206,6 +208,7 @@ ${budgetHtml}
 ${notesHtml}
 ${activityHtml}
 ${dailyHtml}
+${months.length > 1 ? barTable(months, 'By month') : ''}
 ${hourlyHtml}
 ${barTable(byModel(events).slice(0, 8), 'By model')}
 ${barTable(byProject(events).slice(0, 10), 'By project')}

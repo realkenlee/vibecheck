@@ -40,6 +40,13 @@ describe('web dashboard', () => {
     expect(html).toContain('claude-sonnet-4-6')
   })
 
+  it('shows the months trend only when usage spans multiple months', () => {
+    expect(html).not.toContain('By month') // both events in 2026-06
+    const multi = dashboardHtml([ev({}), ev({ timestamp: '2026-05-05T10:00:00.000Z' })], {})
+    expect(multi).toContain('By month')
+    expect(multi).toContain('2026-05')
+  })
+
   it('shows the budget burn-down only when a budget is set', () => {
     expect(html).not.toContain('Budget (')
     const withBudget = dashboardHtml(events, { budget: 100, now: new Date('2026-06-10T12:00:00') })

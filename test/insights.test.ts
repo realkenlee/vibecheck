@@ -39,6 +39,18 @@ describe("doctor's notes", () => {
     expect(cache?.level).toBe('good')
   })
 
+  it('warns on cache thrash (write premium exceeds read savings)', () => {
+    // heavy cache writes, zero cache reads → pure write premium, no payoff
+    const notes = diagnose(fill(60, { cacheWriteTokens: 100_000 }))
+    const thrash = notes.find((n) => n.text.includes('Cache thrash'))
+    expect(thrash?.level).toBe('warn')
+  })
+
+  it('stays quiet about thrash when reads recoup the writes', () => {
+    const notes = diagnose(fill(60, { cacheWriteTokens: 100_000, cacheReadTokens: 2_000_000 }))
+    expect(notes.some((n) => n.text.includes('Cache thrash'))).toBe(false)
+  })
+
   it('flags executing-heavy spend with advice', () => {
     const notes = diagnose([
       ...fill(40, { toolCalls: ['Bash'] }),
