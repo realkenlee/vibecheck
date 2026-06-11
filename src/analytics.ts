@@ -111,3 +111,37 @@ export function filterDays(events: UsageEvent[], days: number, now = new Date())
     return !isNaN(t) && t >= cutoff
   })
 }
+
+// ── budget burn-down (the soft-limit IC view) ─────────────────────────────────
+
+export interface BudgetStatus {
+  /** e.g. "2026-06" */
+  month: string
+  spent: number
+  budget: number
+  /** spent / budget, may exceed 1 */
+  used: number
+  /** linear projection to month end based on elapsed days */
+  projected: number
+  daysElapsed: number
+  daysInMonth: number
+}
+
+export function budgetStatus(events: UsageEvent[], budget: number, now = new Date()): BudgetStatus {
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  let spent = 0
+  for (const e of events) {
+    if (localDay(e.timestamp).startsWith(month)) spent += eventCost(e) ?? 0
+  }
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const daysElapsed = Math.max(1, now.getDate())
+  return {
+    month,
+    spent,
+    budget,
+    used: budget > 0 ? spent / budget : 0,
+    projected: (spent / daysElapsed) * daysInMonth,
+    daysElapsed,
+    daysInMonth,
+  }
+}

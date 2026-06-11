@@ -15,21 +15,26 @@ import {
   toolUsage,
   hourlyHistogram,
   filterDays,
+  budgetStatus,
 } from './analytics.js'
+import { byActivity } from './activities.js'
 import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
   json: boolean
   days: number | null
+  budget: number | null
   claudeDir: string
   codexDir: string
 }
 
 function parseArgs(argv: string[]): Args {
+  const envBudget = parseFloat(process.env.VIBEVITALS_BUDGET ?? '')
   const a: Args = {
     json: false,
     days: null,
+    budget: isNaN(envBudget) ? null : envBudget,
     claudeDir: join(homedir(), '.claude', 'projects'),
     codexDir: join(homedir(), '.codex', 'sessions'),
   }
@@ -37,6 +42,7 @@ function parseArgs(argv: string[]): Args {
     const v = argv[i]
     if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
+    else if (v === '--budget') a.budget = parseFloat(argv[++i])
     else if (v === '--claude-dir') a.claudeDir = argv[++i]
     else if (v === '--codex-dir') a.codexDir = argv[++i]
     else if (v === '--help' || v === '-h') {
@@ -45,6 +51,8 @@ function parseArgs(argv: string[]): Args {
 Usage: vibevitals [options]
 
   --days <n>         only include the last n days
+  --budget <usd>     monthly soft limit — show burn-down + projection
+                     (or set VIBEVITALS_BUDGET)
   --json             machine-readable output
   --claude-dir <p>   Claude Code projects dir (default ~/.claude/projects)
   --codex-dir <p>    Codex sessions dir (default ~/.codex/sessions)
@@ -72,9 +80,11 @@ function main() {
           byAgent: byAgent(events),
           byModel: byModel(events),
           byProject: byProject(events),
+          byActivity: byActivity(events),
           byDay: byDay(events),
           tools: toolUsage(events),
           hourly: hourlyHistogram(events),
+          budget: args.budget ? budgetStatus(events, args.budget) : null,
           parseStats: { claude: claude.stats, codex: codex.stats },
         },
         null,
@@ -110,6 +120,45 @@ function main() {
       ].join(dim('   │   ')),
   )
   console.log()
+
+  // ── budget burn-down ──
+  if (args.budget) {
+    const b = budgetStatus([...claude.events, ...codex.events], args.budget)
+    const pct = Math.round(b.used * 100)
+    const filled = Math.min(14, Math.round(b.used * 14))
+    const bar = '█'.repeat(filled) + '░'.repeat(14 - filled)
+    const overPace = b.projected > b.budget
+    const paint = b.used >= 1 ? yellow : overPace ? yellow : green
+    console.log(
+      bold(`  Budget (${b.month})`) +
+        `   ${bold(money(b.spent))} of ${money(b.budget)}  ` +
+        paint(`▕${bar}▏ ${pct}%`) +
+        dim(`   day ${b.daysElapsed}/${b.daysInMonth} · projected `) +
+        (overPace ? yellow(`${money(b.projected)} ⚠ over pace`) : green(`${money(b.projected)} on pace`)),
+    )
+    console.log()
+  }
+
+  // ── where tokens go: activities ──
+  const acts = byActivity(events)
+  if (acts.length) {
+    console.log(bold('  Where tokens go') + dim('  (by dominant activity per turn)'))
+    console.log(
+      indent(
+        table(
+          acts.map((b) => [
+            b.activity,
+            String(b.events),
+            tokens(b.tokens),
+            money(b.cost),
+            dim(`${Math.round(b.share * 100)}%`),
+          ]),
+          ['activity', 'turns', 'tokens', 'cost', 'share'],
+        ),
+      ),
+    )
+    console.log()
+  }
 
   // ── by agent ──
   const agents = byAgent(events)
