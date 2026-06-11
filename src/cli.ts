@@ -23,6 +23,7 @@ import {
 } from './analytics.js'
 import { byActivity } from './activities.js'
 import { teamReport } from './export.js'
+import { diagnose } from './insights.js'
 import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
@@ -163,6 +164,7 @@ function main() {
           byDay: byDay(events),
           tools: toolUsage(events),
           hourly: hourlyHistogram(events),
+          insights: diagnose(events),
           budget: args.budget ? budgetStatus(events, args.budget) : null,
           parseStats: { claude: claude.stats, codex: codex.stats },
         },
@@ -320,6 +322,17 @@ function main() {
   if (tools.length) {
     console.log(bold('  Top tools'))
     console.log(indent(table(tools.map(([name, n]) => [name, String(n)]), ['tool', 'calls'])))
+    console.log()
+  }
+
+  // ── doctor's notes ──
+  const notes = diagnose(events)
+  if (notes.length) {
+    console.log(bold("  Doctor's notes"))
+    for (const n of notes) {
+      const mark = n.level === 'warn' ? yellow('⚠') : n.level === 'good' ? green('✓') : dim('·')
+      console.log(`  ${mark} ${n.level === 'warn' ? yellow(n.text) : n.level === 'good' ? green(n.text) : n.text}`)
+    }
     console.log()
   }
 
