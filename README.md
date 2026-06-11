@@ -31,6 +31,11 @@ npx vibevitals
 
   When you vibe  (events by hour, local time)
   00 ▁   ▂▃█▃▆▃▃▃▂▃▃▃▆▅▃▄▃▅▂  23
+
+  Doctor's notes
+  · 44% of spend is command-running turns. Verbose build/test output is
+    token-hungry — pipe through tail/grep, silence noisy commands.
+  ✓ Healthy cache: 99% of input was served from cache, saving $851 vs list price.
 ```
 
 ## The problem
@@ -120,6 +125,7 @@ npm run dev     # build + run against your own sessions
 - [x] Branch-level cost attribution
 - [x] Aggregates-only team export
 - [x] Session drill-down (`vibevitals sessions`)
+- [x] Doctor's notes (actionable diagnosis: cache health, spend skews)
 - [ ] Local web dashboard (`vibevitals --web`)
 - [ ] "AI Coding Wrapped" shareable card (anonymized, opt-in)
 - [ ] Gemini CLI, Cursor, opencode parsers
