@@ -61,6 +61,7 @@ npx vibevitals --days 30         # last 30 days
 npx vibevitals --budget 200      # monthly soft limit → burn-down + projection
 npx vibevitals sessions          # most expensive sessions, span + turns
 npx vibevitals wrapped --out wrapped.svg   # shareable card (aggregates only)
+npx vibevitals web               # static HTML dashboard — no server, opens in browser
 npx vibevitals --json            # machine-readable, pipe it anywhere
 ```
 
@@ -128,7 +129,7 @@ npm run dev     # build + run against your own sessions
 - [x] Session drill-down (`vibevitals sessions`)
 - [x] Doctor's notes (actionable diagnosis: cache health, spend skews)
 - [x] "AI Coding Wrapped" shareable card (`vibevitals wrapped`, SVG, aggregates only)
-- [ ] Local web dashboard (`vibevitals --web`)
+- [x] Local dashboard (`vibevitals web` — single static HTML file, no server, no JS)
 - [ ] Gemini CLI, Cursor, opencode parsers
 - [ ] vibevitals for Teams (hosted)
 

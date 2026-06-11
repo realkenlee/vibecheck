@@ -25,11 +25,14 @@ import { byActivity } from './activities.js'
 import { teamReport } from './export.js'
 import { diagnose } from './insights.js'
 import { wrappedStats, wrappedSvg } from './wrapped.js'
+import { dashboardHtml } from './web.js'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
-  command: 'report' | 'export' | 'sessions' | 'wrapped'
+  command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web'
   json: boolean
   days: number | null
   budget: number | null
@@ -55,7 +58,7 @@ function parseArgs(argv: string[]): Args {
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped')) a.command = v
+    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web')) a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
     else if (v === '--budget') a.budget = parseFloat(argv[++i])
@@ -70,6 +73,7 @@ function parseArgs(argv: string[]): Args {
 Usage: vibevitals [options]            personal report (human-readable)
        vibevitals sessions [options]   most expensive sessions
        vibevitals wrapped [options]    shareable card (--out wrapped.svg)
+       vibevitals web [options]        static HTML dashboard (no server)
        vibevitals export [options]     aggregates-only team report (JSON)
 
 Options
@@ -115,6 +119,16 @@ function main() {
     } else {
       console.log(json)
     }
+    return
+  }
+
+  if (args.command === 'web') {
+    const html = dashboardHtml(events, { days: args.days, budget: args.budget })
+    const path = args.out ?? join(tmpdir(), 'vibevitals.html')
+    writeFileSync(path, html)
+    console.log(`wrote ${path} — static file, no server, all data stays local`)
+    const opener = process.platform === 'darwin' ? 'open' : process.platform === 'linux' ? 'xdg-open' : null
+    if (opener && !args.out) spawnSync(opener, [path], { stdio: 'ignore' })
     return
   }
 
