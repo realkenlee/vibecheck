@@ -1,0 +1,38 @@
+{
+  "name": "vibevitals",
+  "version": "0.1.0",
+  "description": "Check your vitals — local-first analytics for your AI coding sessions (Claude Code, Codex). Where do your tokens go?",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "vibevitals": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "dev": "tsc && node dist/cli.js",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "analytics",
+    "tokens",
+    "ai-coding",
+    "usage",
+    "local-first"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

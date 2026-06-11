@@ -1,0 +1,10 @@
+{"timestamp":"2026-06-02T09:00:00.000Z","type":"session_meta","payload":{"id":"c1","timestamp":"2026-06-02T09:00:00.000Z","cwd":"/Users/dev/acme-app","originator":"codex_cli_rs","cli_version":"0.42.0","instructions":null}}
+{"timestamp":"2026-06-02T09:00:01.000Z","type":"turn_context","payload":{"cwd":"/Users/dev/acme-app","model":"gpt-5.3-codex","approval_policy":"on-request"}}
+{"timestamp":"2026-06-02T09:00:02.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":1.0}}}}
+{"timestamp":"2026-06-02T09:00:03.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{}","call_id":"f1"}}
+{"timestamp":"2026-06-02T09:00:04.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","input":"...","call_id":"f2"}}
+{"timestamp":"2026-06-02T09:00:05.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10000,"cached_input_tokens":6000,"output_tokens":200,"reasoning_output_tokens":50,"total_tokens":10200},"last_token_usage":{"input_tokens":10000,"cached_input_tokens":6000,"output_tokens":200,"reasoning_output_tokens":50,"total_tokens":10200},"model_context_window":258400}}}
+{"timestamp":"2026-06-02T09:05:00.000Z","type":"turn_context","payload":{"cwd":"/Users/dev/other-repo","model":"gpt-5.3-codex-mini","approval_policy":"on-request"}}
+{"timestamp":"2026-06-02T09:05:05.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":11000,"cached_input_tokens":6000,"output_tokens":300,"reasoning_output_tokens":0,"total_tokens":11300},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":0,"output_tokens":100,"reasoning_output_tokens":0,"total_tokens":1100},"model_context_window":258400}}}
+{"timestamp":"2026-06-02T09:06:00.000Z","type":"event_msg","payload":{"type":"agent_message","message":"done"}}
+broken line {{{

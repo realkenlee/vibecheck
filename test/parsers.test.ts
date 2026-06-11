@@ -1,0 +1,94 @@
+import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parseClaudeLines } from '../src/parsers/claude-code.js'
+import { parseCodexLines } from '../src/parsers/codex.js'
+
+const FIX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
+const lines = (f: string) => readFileSync(join(FIX, f), 'utf8').split('\n')
+
+describe('claude-code parser', () => {
+  const r = parseClaudeLines(lines('claude-code.jsonl'), 'fixture-session')
+
+  it('dedupes streamed duplicate message ids (the double-count trap)', () => {
+    // 4 assistant records with usage, but msg_dup appears twice and
+    // <synthetic> is excluded -> 3 events
+    expect(r.events).toHaveLength(3)
+    const dup = r.events.filter((e) => e.inputTokens === 100)
+    expect(dup).toHaveLength(1)
+  })
+
+  it('unions tool calls across duplicate lines', () => {
+    const dup = r.events.find((e) => e.inputTokens === 100)!
+    expect(dup.toolCalls).toEqual(['Bash'])
+  })
+
+  it('extracts usage including cache fields', () => {
+    const dup = r.events.find((e) => e.inputTokens === 100)!
+    expect(dup.outputTokens).toBe(50)
+    expect(dup.cacheReadTokens).toBe(2000)
+    expect(dup.cacheWriteTokens).toBe(300)
+    expect(dup.model).toBe('claude-sonnet-4-6')
+  })
+
+  it('derives project from cwd basename', () => {
+    expect(r.events[0].project).toBe('acme-app')
+  })
+
+  it('marks sidechain (subagent) events', () => {
+    const side = r.events.find((e) => e.sidechain)
+    expect(side).toBeDefined()
+    expect(side!.project).toBe('side-project')
+  })
+
+  it('skips synthetic error records', () => {
+    expect(r.events.some((e) => e.model === '<synthetic>')).toBe(false)
+  })
+
+  it('counts unparseable lines as schema-drift canary', () => {
+    expect(r.stats.skippedLines).toBe(1)
+  })
+
+  it('collects multiple tool calls in one message', () => {
+    const multi = r.events.find((e) => e.model === 'claude-opus-4-8')!
+    expect(multi.toolCalls).toEqual(['Read', 'Bash'])
+  })
+})
+
+describe('codex parser', () => {
+  const r = parseCodexLines(lines('codex.jsonl'), 'fixture-session')
+
+  it('emits one event per token_count with info, skipping null-info heartbeats', () => {
+    expect(r.events).toHaveLength(2)
+  })
+
+  it('splits cached tokens out of input_tokens', () => {
+    const e = r.events[0]
+    expect(e.inputTokens).toBe(4000) // 10000 - 6000 cached
+    expect(e.cacheReadTokens).toBe(6000)
+    expect(e.outputTokens).toBe(200)
+  })
+
+  it('uses last_token_usage (per-response), not cumulative totals', () => {
+    const e = r.events[1]
+    expect(e.inputTokens).toBe(1000)
+    expect(e.outputTokens).toBe(100)
+  })
+
+  it('tracks model and cwd from turn_context', () => {
+    expect(r.events[0].model).toBe('gpt-5.3-codex')
+    expect(r.events[0].project).toBe('acme-app')
+    expect(r.events[1].model).toBe('gpt-5.3-codex-mini')
+    expect(r.events[1].project).toBe('other-repo')
+  })
+
+  it('attributes tool calls to the next token_count', () => {
+    expect(r.events[0].toolCalls).toEqual(['shell', 'apply_patch'])
+    expect(r.events[1].toolCalls).toEqual([])
+  })
+
+  it('counts unparseable lines', () => {
+    expect(r.stats.skippedLines).toBe(1)
+  })
+})

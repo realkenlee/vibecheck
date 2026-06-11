@@ -1,0 +1,113 @@
+// Pure aggregation functions over UsageEvent[] — all independently testable.
+
+import type { UsageEvent } from './schema.js'
+import { eventCost, cacheSavings } from './pricing.js'
+
+export interface Totals {
+  events: number
+  sessions: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  cost: number
+  cacheSavings: number
+  /** Models we couldn't price — their spend is NOT in `cost`. */
+  unknownModels: string[]
+}
+
+export function totals(events: UsageEvent[]): Totals {
+  const t: Totals = {
+    events: events.length,
+    sessions: new Set(events.map((e) => `${e.agent}:${e.sessionId}`)).size,
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    cost: 0,
+    cacheSavings: 0,
+    unknownModels: [],
+  }
+  const unknown = new Set<string>()
+  for (const e of events) {
+    t.inputTokens += e.inputTokens
+    t.outputTokens += e.outputTokens
+    t.cacheReadTokens += e.cacheReadTokens
+    t.cacheWriteTokens += e.cacheWriteTokens
+    const c = eventCost(e)
+    if (c == null) unknown.add(e.model)
+    else t.cost += c
+    t.cacheSavings += cacheSavings(e)
+  }
+  t.unknownModels = [...unknown].sort()
+  return t
+}
+
+export interface Bucket {
+  key: string
+  events: number
+  tokens: number // input + output + cacheRead + cacheWrite
+  cost: number
+}
+
+function bucketBy(events: UsageEvent[], keyFn: (e: UsageEvent) => string): Bucket[] {
+  const map = new Map<string, Bucket>()
+  for (const e of events) {
+    const key = keyFn(e)
+    let b = map.get(key)
+    if (!b) {
+      b = { key, events: 0, tokens: 0, cost: 0 }
+      map.set(key, b)
+    }
+    b.events++
+    b.tokens += e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
+    b.cost += eventCost(e) ?? 0
+  }
+  return [...map.values()].sort((a, b) => b.cost - a.cost || b.tokens - a.tokens)
+}
+
+export const byModel = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.model)
+export const byProject = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.project)
+export const byAgent = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.agent)
+
+/** Buckets keyed by local date YYYY-MM-DD, sorted ascending by date. */
+export function byDay(events: UsageEvent[]): Bucket[] {
+  return bucketBy(events, (e) => localDay(e.timestamp)).sort((a, b) =>
+    a.key.localeCompare(b.key),
+  )
+}
+
+export function localDay(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return 'unknown'
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Tool name -> invocation count, sorted desc. */
+export function toolUsage(events: UsageEvent[]): [string, number][] {
+  const map = new Map<string, number>()
+  for (const e of events)
+    for (const t of e.toolCalls) map.set(t, (map.get(t) ?? 0) + 1)
+  return [...map.entries()].sort((a, b) => b[1] - a[1])
+}
+
+/** 24-slot histogram of event counts by local hour. */
+export function hourlyHistogram(events: UsageEvent[]): number[] {
+  const h = new Array(24).fill(0)
+  for (const e of events) {
+    const d = new Date(e.timestamp)
+    if (!isNaN(d.getTime())) h[d.getHours()]++
+  }
+  return h
+}
+
+export function filterDays(events: UsageEvent[], days: number, now = new Date()): UsageEvent[] {
+  const cutoff = now.getTime() - days * 86_400_000
+  return events.filter((e) => {
+    const t = new Date(e.timestamp).getTime()
+    return !isNaN(t) && t >= cutoff
+  })
+}
