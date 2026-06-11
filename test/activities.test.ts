@@ -15,6 +15,7 @@ const ev = (over: Partial<UsageEvent>): UsageEvent => ({
   cacheWriteTokens: 0,
   toolCalls: [],
   sidechain: false,
+  gitBranch: null,
   ...over,
 })
 

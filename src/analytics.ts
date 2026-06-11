@@ -69,6 +69,8 @@ function bucketBy(events: UsageEvent[], keyFn: (e: UsageEvent) => string): Bucke
 export const byModel = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.model)
 export const byProject = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.project)
 export const byAgent = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.agent)
+/** Branch attribution — "what did the q2-migration branch cost". Codex events land in (unknown). */
+export const byBranch = (ev: UsageEvent[]) => bucketBy(ev, (e) => e.gitBranch ?? '(unknown)')
 
 /** Buckets keyed by local date YYYY-MM-DD, sorted ascending by date. */
 export function byDay(events: UsageEvent[]): Bucket[] {

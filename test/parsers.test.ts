@@ -54,6 +54,12 @@ describe('claude-code parser', () => {
     const multi = r.events.find((e) => e.model === 'claude-opus-4-8')!
     expect(multi.toolCalls).toEqual(['Read', 'Bash'])
   })
+
+  it('extracts gitBranch when present, null otherwise', () => {
+    expect(r.events.find((e) => e.inputTokens === 100)!.gitBranch).toBe('main')
+    expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.gitBranch).toBe('feat/q2-migration')
+    expect(r.events.find((e) => e.sidechain)!.gitBranch).toBeNull()
+  })
 })
 
 describe('codex parser', () => {

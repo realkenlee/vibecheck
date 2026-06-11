@@ -70,6 +70,7 @@ export function parseCodexLines(lines: Iterable<string>, sessionId: string): Par
         cacheWriteTokens: 0,
         toolCalls: pendingTools,
         sidechain: false,
+        gitBranch: null, // codex logs don't record the branch
       })
       pendingTools = []
     }

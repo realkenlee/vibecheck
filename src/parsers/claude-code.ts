@@ -71,6 +71,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
       toolCalls,
       sidechain: d.isSidechain === true,
+      gitBranch: typeof d.gitBranch === 'string' && d.gitBranch ? d.gitBranch : null,
     })
   }
 

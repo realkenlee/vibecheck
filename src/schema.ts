@@ -22,6 +22,8 @@ export interface UsageEvent {
   toolCalls: string[]
   /** True for subagent (sidechain) traffic. */
   sidechain: boolean
+  /** Git branch the session ran on (Claude Code records it; null when unknown). */
+  gitBranch: string | null
 }
 
 export interface ParseStats {

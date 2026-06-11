@@ -4,6 +4,7 @@
 
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { parseClaudeDir } from './parsers/claude-code.js'
 import { parseCodexDir } from './parsers/codex.js'
 import {
@@ -11,6 +12,7 @@ import {
   byModel,
   byProject,
   byAgent,
+  byBranch,
   byDay,
   toolUsage,
   hourlyHistogram,
@@ -18,13 +20,18 @@ import {
   budgetStatus,
 } from './analytics.js'
 import { byActivity } from './activities.js'
+import { teamReport } from './export.js'
 import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
+  command: 'report' | 'export'
   json: boolean
   days: number | null
   budget: number | null
+  out: string | null
+  anonymous: boolean
+  includeProjects: boolean
   claudeDir: string
   codexDir: string
 }
@@ -32,32 +39,48 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   const envBudget = parseFloat(process.env.VIBEVITALS_BUDGET ?? '')
   const a: Args = {
+    command: 'report',
     json: false,
     days: null,
     budget: isNaN(envBudget) ? null : envBudget,
+    out: null,
+    anonymous: false,
+    includeProjects: false,
     claudeDir: join(homedir(), '.claude', 'projects'),
     codexDir: join(homedir(), '.codex', 'sessions'),
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (v === '--json') a.json = true
+    if (i === 0 && v === 'export') a.command = 'export'
+    else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
     else if (v === '--budget') a.budget = parseFloat(argv[++i])
+    else if (v === '--out') a.out = argv[++i]
+    else if (v === '--anonymous') a.anonymous = true
+    else if (v === '--include-projects') a.includeProjects = true
     else if (v === '--claude-dir') a.claudeDir = argv[++i]
     else if (v === '--codex-dir') a.codexDir = argv[++i]
     else if (v === '--help' || v === '-h') {
       console.log(`vibevitals — where do your AI coding tokens go?
 
-Usage: vibevitals [options]
+Usage: vibevitals [options]            personal report (human-readable)
+       vibevitals export [options]     aggregates-only team report (JSON)
 
-  --days <n>         only include the last n days
-  --budget <usd>     monthly soft limit — show burn-down + projection
-                     (or set VIBEVITALS_BUDGET)
-  --json             machine-readable output
-  --claude-dir <p>   Claude Code projects dir (default ~/.claude/projects)
-  --codex-dir <p>    Codex sessions dir (default ~/.codex/sessions)
+Options
+  --days <n>           only include the last n days
+  --budget <usd>       monthly soft limit — burn-down + projection
+                       (or set VIBEVITALS_BUDGET)
+  --json               machine-readable output (report mode)
+  --claude-dir <p>     Claude Code projects dir (default ~/.claude/projects)
+  --codex-dir <p>      Codex sessions dir (default ~/.codex/sessions)
 
-All analysis is local. Nothing leaves your machine.`)
+Export options (what you share is your call — read the payload first)
+  --out <file>         write the report to a file instead of stdout
+  --anonymous          omit your git name/email from the report
+  --include-projects   include project + branch names (off by default —
+                       codenames can be sensitive)
+
+All analysis is local. Nothing leaves your machine unless you share an export.`)
       process.exit(0)
     }
   }
@@ -72,6 +95,23 @@ function main() {
   let events: UsageEvent[] = [...claude.events, ...codex.events]
   if (args.days) events = filterDays(events, args.days)
 
+  if (args.command === 'export') {
+    const report = teamReport(events, {
+      days: args.days,
+      budget: args.budget,
+      anonymous: args.anonymous,
+      includeProjects: args.includeProjects,
+    })
+    const json = JSON.stringify(report, null, 2)
+    if (args.out) {
+      writeFileSync(args.out, json + '\n')
+      console.error(`wrote ${args.out} — aggregates only, review before sharing`)
+    } else {
+      console.log(json)
+    }
+    return
+  }
+
   if (args.json) {
     console.log(
       JSON.stringify(
@@ -80,6 +120,7 @@ function main() {
           byAgent: byAgent(events),
           byModel: byModel(events),
           byProject: byProject(events),
+          byBranch: byBranch(events),
           byActivity: byActivity(events),
           byDay: byDay(events),
           tools: toolUsage(events),
@@ -202,6 +243,21 @@ function main() {
     ),
   )
   console.log()
+
+  // ── by branch (skip if branch data is absent, e.g. codex-only) ──
+  const branches = byBranch(events).filter((b) => b.key !== '(unknown)')
+  if (branches.length > 1) {
+    console.log(bold('  By branch') + dim('  (Claude Code sessions)'))
+    console.log(
+      indent(
+        table(
+          branches.slice(0, 10).map((b) => [b.key, String(b.events), tokens(b.tokens), money(b.cost)]),
+          ['branch', 'calls', 'tokens', 'cost'],
+        ),
+      ),
+    )
+    console.log()
+  }
 
   // ── daily spend, last 14 buckets ──
   const days = byDay(events).filter((d) => d.key !== 'unknown')

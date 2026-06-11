@@ -1,8 +1,15 @@
 {
   "name": "vibevitals",
-  "version": "0.1.0",
-  "description": "Check your vitals — local-first analytics for your AI coding sessions (Claude Code, Codex). Where do your tokens go?",
+  "version": "0.2.0",
+  "description": "Know where your AI coding tokens go — local-first analytics for Claude Code & Codex: spend, activities, budget burn-down. Free forever.",
   "license": "MIT",
+  "author": "Ken Lee <khflee@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/realkenlee/vibevitals.git"
+  },
+  "homepage": "https://github.com/realkenlee/vibevitals#readme",
+  "bugs": "https://github.com/realkenlee/vibevitals/issues",
   "type": "module",
   "bin": {
     "vibevitals": "dist/cli.js"
@@ -10,7 +17,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -25,7 +34,10 @@
     "tokens",
     "ai-coding",
     "usage",
-    "local-first"
+    "local-first",
+    "budget",
+    "devprod",
+    "cost-tracking"
   ],
   "engines": {
     "node": ">=18"
