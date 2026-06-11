@@ -60,6 +60,7 @@ npx vibevitals                   # full report, all time
 npx vibevitals --days 30         # last 30 days
 npx vibevitals --budget 200      # monthly soft limit → burn-down + projection
 npx vibevitals sessions          # most expensive sessions, span + turns
+npx vibevitals wrapped --out wrapped.svg   # shareable card (aggregates only)
 npx vibevitals --json            # machine-readable, pipe it anywhere
 ```
 
@@ -126,8 +127,8 @@ npm run dev     # build + run against your own sessions
 - [x] Aggregates-only team export
 - [x] Session drill-down (`vibevitals sessions`)
 - [x] Doctor's notes (actionable diagnosis: cache health, spend skews)
+- [x] "AI Coding Wrapped" shareable card (`vibevitals wrapped`, SVG, aggregates only)
 - [ ] Local web dashboard (`vibevitals --web`)
-- [ ] "AI Coding Wrapped" shareable card (anonymized, opt-in)
 - [ ] Gemini CLI, Cursor, opencode parsers
 - [ ] vibevitals for Teams (hosted)
 

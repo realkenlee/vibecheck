@@ -24,11 +24,12 @@ import {
 import { byActivity } from './activities.js'
 import { teamReport } from './export.js'
 import { diagnose } from './insights.js'
+import { wrappedStats, wrappedSvg } from './wrapped.js'
 import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
-  command: 'report' | 'export' | 'sessions'
+  command: 'report' | 'export' | 'sessions' | 'wrapped'
   json: boolean
   days: number | null
   budget: number | null
@@ -54,7 +55,7 @@ function parseArgs(argv: string[]): Args {
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (i === 0 && (v === 'export' || v === 'sessions')) a.command = v
+    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped')) a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') a.days = parseInt(argv[++i], 10)
     else if (v === '--budget') a.budget = parseFloat(argv[++i])
@@ -68,6 +69,7 @@ function parseArgs(argv: string[]): Args {
 
 Usage: vibevitals [options]            personal report (human-readable)
        vibevitals sessions [options]   most expensive sessions
+       vibevitals wrapped [options]    shareable card (--out wrapped.svg)
        vibevitals export [options]     aggregates-only team report (JSON)
 
 Options
@@ -113,6 +115,32 @@ function main() {
     } else {
       console.log(json)
     }
+    return
+  }
+
+  if (args.command === 'wrapped') {
+    const s = wrappedStats(events)
+    const period = args.days ? `last ${args.days} days` : 'all time'
+    if (args.json) {
+      console.log(JSON.stringify(s, null, 2))
+      return
+    }
+    if (args.out) {
+      writeFileSync(args.out, wrappedSvg(s, period))
+      console.log(`wrote ${args.out} — aggregate numbers only, safe to share`)
+      return
+    }
+    const hour = s.peakHour === null ? '—' : `${String(s.peakHour).padStart(2, '0')}:00`
+    console.log()
+    console.log(bold('  🩺 AI Coding Wrapped') + dim(`  ·  ${period}`))
+    console.log()
+    console.log(`  ${bold(tokens(s.tokens))} tokens  ·  ${bold(money(s.cost))} API-equivalent  ·  ${green(money(s.cacheSavings) + ' saved by caching')}`)
+    console.log(`  ${s.sessions} sessions over ${s.activeDays} active days  ·  longest streak ${bold(String(s.streak))} days`)
+    if (s.topModel) console.log(`  mostly ${cyan(s.topModel)}` + (s.topActivity ? dim(`  ·  ${Math.floor(s.topActivity.share * 100)}% ${s.topActivity.name}`) : ''))
+    if (s.busiestDay) console.log(`  biggest day ${s.busiestDay.date} (${money(s.busiestDay.cost)})  ·  peak hour ${hour}`)
+    console.log()
+    console.log(dim('  vibevitals wrapped --out wrapped.svg  →  1200×630 card, safe to share'))
+    console.log()
     return
   }
 
