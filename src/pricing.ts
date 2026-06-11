@@ -8,6 +8,9 @@ export interface Rate {
   cacheWrite: number
 }
 
+/** When the list-price table below was last verified. Surfaced in CLI output so a stale binary discloses itself. */
+export const PRICES_AS_OF = '2026-06'
+
 const R = (input: number, output: number): Rate => ({
   input,
   output,

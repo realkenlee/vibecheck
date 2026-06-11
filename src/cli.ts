@@ -24,6 +24,7 @@ import {
   budgetStatus,
 } from './analytics.js'
 import { byActivity } from './activities.js'
+import { PRICES_AS_OF } from './pricing.js'
 import { teamReport } from './export.js'
 import { diagnose } from './insights.js'
 import { wrappedStats, wrappedSvg } from './wrapped.js'
@@ -46,6 +47,12 @@ interface Args {
   codexDir: string
 }
 
+/** Bad input fails loudly — a typo'd month must never read as "you spent $0". */
+function fail(msg: string): never {
+  console.error(msg)
+  process.exit(1)
+}
+
 function parseArgs(argv: string[]): Args {
   const envBudget = parseFloat(process.env.VIBEVITALS_BUDGET ?? '')
   const a: Args = {
@@ -65,15 +72,22 @@ function parseArgs(argv: string[]): Args {
     if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months'))
       a.command = v
     else if (v === '--json') a.json = true
-    else if (v === '--days') a.days = parseInt(argv[++i], 10)
+    else if (v === '--days') {
+      const n = Number(argv[++i])
+      if (!Number.isInteger(n) || n <= 0) fail(`--days wants a positive integer, got: ${argv[i]}`)
+      a.days = n
+    }
     else if (v === '--month') {
       a.month = argv[++i]
-      if (!/^\d{4}-\d{2}$/.test(a.month ?? '')) {
-        console.error(`--month wants YYYY-MM, got: ${a.month}`)
-        process.exit(1)
-      }
+      if (!/^\d{4}-\d{2}$/.test(a.month ?? '')) fail(`--month wants YYYY-MM, got: ${a.month}`)
+      const mm = Number(a.month!.slice(5))
+      if (mm < 1 || mm > 12) fail(`--month wants a month 01–12, got: ${a.month}`)
     }
-    else if (v === '--budget') a.budget = parseFloat(argv[++i])
+    else if (v === '--budget') {
+      const b = Number(argv[++i])
+      if (!Number.isFinite(b) || b <= 0) fail(`--budget wants a positive dollar amount, got: ${argv[i]}`)
+      a.budget = b
+    }
     else if (v === '--out') a.out = argv[++i]
     else if (v === '--anonymous') a.anonymous = true
     else if (v === '--include-projects') a.includeProjects = true
@@ -279,6 +293,14 @@ function main() {
     console.log('  No sessions found.')
     console.log(dim(`  Looked in: ${args.claudeDir}`))
     console.log(dim(`             ${args.codexDir}`))
+    if (args.days || args.month) {
+      console.log()
+      console.log(`  Your filter (${args.month ?? `last ${args.days} days`}) may be the reason — try without it.`)
+    } else {
+      console.log()
+      console.log('  If your logs live elsewhere, point me at them:')
+      console.log(dim('    vibevitals --claude-dir <path> --codex-dir <path>'))
+    }
     return
   }
 
@@ -441,7 +463,7 @@ function main() {
   }
   console.log(
     dim(
-      `  Parsed ${claude.stats.files + codex.stats.files} files · costs are API-list-price estimates`,
+      `  Parsed ${claude.stats.files + codex.stats.files} files · costs are API-list-price estimates (prices as of ${PRICES_AS_OF})`,
     ),
   )
   console.log()
