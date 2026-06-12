@@ -2,7 +2,7 @@
 // port, no JS dependencies; everything is rendered at generation time. Your
 // data is private because the dashboard is just a file on your disk.
 
-import type { UsageEvent } from './schema.js'
+import type { Compaction, UsageEvent } from './schema.js'
 import {
   totals,
   byModel,
@@ -46,6 +46,7 @@ export interface WebOptions {
   days?: number | null
   budget?: number | null
   now?: Date
+  compactions?: Compaction[]
 }
 
 export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): string {
@@ -57,7 +58,7 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
   const recent = days.slice(-30)
   const hours = hourlyHistogram(events)
   const maxHour = Math.max(...hours, 1)
-  const notes = diagnose(events)
+  const notes = diagnose(events, opts.compactions ?? [])
   const sessions = bySession(events).slice(0, 15)
   const months = byMonth(events).filter((m) => m.key !== 'unknown')
   const branches = byBranch(events).filter((b) => b.key !== '(unknown)')

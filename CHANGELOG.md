@@ -2,6 +2,15 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- The `web` dashboard's doctor's notes now include compaction receipts (compactions are threaded through `WebOptions`)
+- The zero-install skill now specifies the three highest-value doctor's notes (context tax, idle gaps, compaction receipts) with exact thresholds
+
+### Fixed
+- Skill spec: session identity is the **.jsonl filename**, not the embedded `sessionId` field (which can differ after resumes) — caught by re-validating a from-spec implementation against the CLI
+
 ## [0.5.0] — 2026-06-11
 
 ### Added

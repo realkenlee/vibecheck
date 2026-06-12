@@ -27,7 +27,8 @@ Getting these wrong silently inflates the numbers. Each was verified against rea
 - **Dedupe by `message.id`** — the same assistant message is streamed as multiple lines. Counting every line over-counts ~30%. Keep one record per `message.id` (union the tool names across duplicates).
 - **Skip** records where `message.model === "<synthetic>"`.
 - Usage fields: `message.usage.input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`. These four are disjoint — sum all four for total tokens.
-- `isSidechain: true` marks subagent traffic. `cwd` basename = project. Top-level `gitBranch` = branch. `sessionId` for session counts. `timestamp` ISO.
+- `isSidechain: true` marks subagent traffic. `cwd` basename = project. Top-level `gitBranch` = branch. `timestamp` ISO.
+- **Session identity = the .jsonl filename**, not the embedded `sessionId` field (which can differ within one file after resumes). One file = one session.
 - Tool calls: `message.content[]` items with `type === "tool_use"` → `.name`.
 
 ### Codex (`~/.codex/sessions/**/*.jsonl`)
@@ -60,6 +61,14 @@ Unknown models: count tokens, exclude from cost, and SAY SO. Never silently misp
 Show: total API-equivalent spend (label it exactly that — subscription users don't pay this, it's value consumed), total tokens, sessions, cache savings (cache reads × (input − cacheRead rates)); then cost by model, by project, by month. If the user gives a monthly budget: spent / budget, % used, linear month-end projection.
 
 Honesty rules: round percentages DOWN; disclose file count parsed and any unparseable lines; never present an estimate as a bill.
+
+## Doctor's notes — the diagnosis
+
+After the totals, compute these three. Deterministic, threshold-gated: skip any note whose threshold isn't met, and never overstate.
+
+1. **Context tax.** Group events by session, sorted by timestamp. For each session with ≥100 turns: baseline = mean cache-read tokens of its first 25 turns; for every turn from index 100 on, add `max(0, cacheRead − baseline) × cacheReadRate` to the tax. If total tax > $5, report: how many sessions ran past 100 turns, avg late-turn vs early-turn cache-read, and the dollar figure. Framing: a session re-pays its whole history every turn — context is rent, not a purchase; `/compact` or restart between tasks.
+2. **Idle gaps.** Within each session, count turn-to-turn gaps >5 minutes (the prompt cache expires); price each post-gap turn's cache-write tokens at the 1.25× write rate. If ≥10 gaps and > $2, report the count and cost: coming back after a break re-writes the cache at a premium.
+3. **Compaction receipts** (Claude Code). `type === "system"` lines with `subtype === "compact_boundary"` carry `compactMetadata.{trigger, preTokens, postTokens}`. If ≥3 compactions and ≥80% have trigger `"auto"`, report: every one was forced at the context ceiling, shedding on average `preTokens − postTokens` tokens the user had been re-paying every turn — a manual `/compact` between tasks captures that earlier.
 
 ## Privacy
 

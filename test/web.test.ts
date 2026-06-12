@@ -54,6 +54,20 @@ describe('web dashboard', () => {
     expect(withBudget).toContain('on pace')
   })
 
+  it("threads compactions into the doctor's notes", () => {
+    const many = Array.from({ length: 60 }, (_, i) => ev({ sessionId: `s${i % 7}` }))
+    const compaction = {
+      sessionId: 's0',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      trigger: 'auto',
+      preTokens: 160_000,
+      postTokens: 10_000,
+    }
+    const withC = dashboardHtml(many, { compactions: [compaction, compaction, compaction] })
+    expect(withC).toContain('auto-forced')
+    expect(dashboardHtml(many, {})).not.toContain('auto-forced')
+  })
+
   it('escapes hostile names everywhere', () => {
     const hostile = dashboardHtml(
       [ev({ project: '<img src=x onerror=alert(1)>', model: '"><script>', gitBranch: '<b>' })],
