@@ -1,0 +1,58 @@
+name: Schema drift report
+description: vibecheck printed "unparseable lines — possible schema drift". These reports are how the parsers stay correct — thank you.
+title: "[drift] "
+labels: [schema-drift]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first:** never paste transcript lines — they contain your prompts and code.
+        Everything this form asks for is counts, versions, and JSON **key names** only.
+  - type: input
+    id: vibecheck-version
+    attributes:
+      label: vibecheck version
+      description: "`npx vibe-check --version`"
+      placeholder: vibecheck 0.16.0
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Which agent's logs drifted?
+      description: The warning shows a per-agent split.
+      options:
+        - claude-code
+        - codex
+        - both
+    validations:
+      required: true
+  - type: input
+    id: agent-version
+    attributes:
+      label: Agent version
+      description: "`claude --version` or `codex --version` — schema changes ship with agent updates"
+      placeholder: e.g. claude 2.3.1
+    validations:
+      required: true
+  - type: input
+    id: skipped
+    attributes:
+      label: The warning line
+      description: Copy the ⚠ line exactly — it only contains counts.
+      placeholder: "⚠ 142 unparseable lines (claude-code 142) — possible schema drift"
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: Top-level key names of an unparseable line (optional)
+      description: |
+        If you're comfortable: open one offending `.jsonl` line and list its top-level **key names only**
+        (e.g. `type, timestamp, payload`). Never the values.
+      placeholder: "type, subtype, timestamp, newFieldName"
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything that changed recently? (optional)
+      placeholder: "Updated Claude Code yesterday / started using a new feature / …"

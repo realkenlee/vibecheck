@@ -1,0 +1,34 @@
+name: Bug report
+description: Something else is wrong — a crash, a wrong number, a confusing output.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first:** never paste transcript lines or file paths from your logs.
+        Command output from vibecheck itself (a report, an error message) is aggregate and safe.
+  - type: input
+    id: version
+    attributes:
+      label: vibecheck version
+      description: "`npx vibe-check --version`"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: "npx vibe-check months --json"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / install method
+      placeholder: "macOS 15, npx (or: linux-x64 binary)"

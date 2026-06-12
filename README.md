@@ -153,7 +153,7 @@ By default the export contains **no prompts, no code, no file paths, no session 
 - Claude Code streams duplicate assistant records — vibecheck dedupes by message id (naive parsers over-count by ~30%).
 - Codex `cached_input_tokens` is a subset of `input_tokens` — vibecheck splits it out before pricing.
 - Activity attribution is per-turn by dominant tool (precedence: editing > executing > delegating > exploring > planning). Read it as "cost of turns spent doing X."
-- Unparseable lines are counted and surfaced — these JSONL schemas are undocumented and drift between agent versions. If you see the schema-drift warning, please [file an issue](../../issues).
+- Unparseable lines are counted and surfaced — these JSONL schemas are undocumented and drift between agent versions. If you see the schema-drift warning, please [file a drift report](../../issues/new?template=schema-drift.yml) — it asks for counts and key names only, never your transcripts.
 
 ## Development
 

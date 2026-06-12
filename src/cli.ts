@@ -588,6 +588,15 @@ function main() {
     console.log('  No sessions found.')
     console.log(dim(`  Looked in: ${args.claudeDir}`))
     console.log(dim(`             ${args.codexDir}`))
+    // The worst drift case: logs exist but NOTHING parsed — don't let it
+    // masquerade as "no sessions". Only when zero events pre-filter, so a
+    // --month with no data doesn't false-alarm.
+    const skippedAll = claude.stats.skippedLines + codex.stats.skippedLines
+    if (skippedAll > 0 && claude.events.length + codex.events.length === 0) {
+      console.log()
+      console.log(yellow(`  ⚠ Your logs had ${skippedAll} lines but none parsed — likely schema drift after an agent update.`))
+      console.log(dim('    report it (counts only, never your transcripts): https://github.com/realkenlee/vibecheck/issues/new?template=schema-drift.yml'))
+    }
     if (args.days || args.month || args.project || args.branch || args.agent) {
       console.log()
       console.log(`  Your filter (${periodLabel(args)}) may be the reason — try without it.`)
@@ -763,7 +772,19 @@ function main() {
   }
   const skipped = claude.stats.skippedLines + codex.stats.skippedLines
   if (skipped > 0) {
-    console.log(yellow(`  ⚠ ${skipped} unparseable lines — possible schema drift, please file an issue`))
+    // Name the parser that drifted — it's the first triage question.
+    const split = [
+      claude.stats.skippedLines > 0 ? `claude-code ${claude.stats.skippedLines}` : null,
+      codex.stats.skippedLines > 0 ? `codex ${codex.stats.skippedLines}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    console.log(yellow(`  ⚠ ${skipped} unparseable lines (${split}) — possible schema drift`))
+    console.log(
+      dim(
+        '    report it (counts only, never your transcripts): https://github.com/realkenlee/vibecheck/issues/new?template=schema-drift.yml',
+      ),
+    )
   }
   console.log(
     dim(
