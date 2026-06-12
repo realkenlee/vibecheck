@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.13.0] — 2026-06-12
 
 ### Added
 - **Agent runtime** from Claude Code `turn_duration` records — summed per-turn durations measure how long the agent actually worked (parallel subagents each log their own turns, so totals can exceed wall-clock):
