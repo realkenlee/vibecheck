@@ -82,7 +82,26 @@ describe('web dashboard', () => {
     })
     expect(withC).toContain('>gaps<')
     expect(withC).toContain('>compact<')
-    expect(withC).toMatch(/<td class="num">1<\/td><td class="num">1<\/td>/) // s1 row: 1 gap, 1 compaction
+    // s1 summary row: 1 gap, 1 compaction
+    expect(withC).toMatch(/<span class="num">1<\/span><span class="num">1<\/span>/)
+  })
+
+  it('expands each session into a script-free drill-down', () => {
+    const gapEvents = [
+      ev({}),
+      ev({ timestamp: '2026-06-05T10:06:00.000Z', toolCalls: ['Bash'] }),
+      ev({ sessionId: 's2', timestamp: '2026-06-06T11:00:00.000Z' }),
+    ]
+    const html2 = dashboardHtml(gapEvents, {
+      compactions: [
+        { sessionId: 's1', timestamp: '2026-06-05T10:03:00.000Z', trigger: 'auto', preTokens: 150_000, postTokens: 10_000 },
+      ],
+    })
+    expect(html2).toContain('<details class="sess">')
+    expect(html2).toContain('<b>1 gap</b> &gt;5min — longest 6m (06-05 10:00 → 06-05 10:06)')
+    expect(html2).toContain('<b>1 compaction</b> (1 auto) · ~140.0k tokens shed')
+    expect(html2).toContain('tools: Edit ×1 · Bash ×1')
+    expect(html2).not.toMatch(/<script/i) // drill-down must stay zero-JS
   })
 
   it("threads file reads into the doctor's notes", () => {

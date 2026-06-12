@@ -1,6 +1,7 @@
 // Tiny ANSI table/format helpers — zero dependencies.
 
-const TTY = process.stdout.isTTY
+// Color only when interactive, and respect the NO_COLOR convention (no-color.org)
+const TTY = process.stdout.isTTY && !process.env.NO_COLOR
 export const bold = (s: string) => (TTY ? `\x1b[1m${s}\x1b[0m` : s)
 export const dim = (s: string) => (TTY ? `\x1b[2m${s}\x1b[0m` : s)
 export const green = (s: string) => (TTY ? `\x1b[32m${s}\x1b[0m` : s)

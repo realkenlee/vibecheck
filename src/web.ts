@@ -11,6 +11,7 @@ import {
   byDay,
   byMonth,
   bySession,
+  idleGaps,
   toolUsage,
   hourlyHistogram,
   budgetStatus,
@@ -137,17 +138,64 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
     .join('')}</div>
 <div class="legend"><span>00</span><span style="float:right">23</span></div></section>`
 
+  // per-session drill-down: events and compactions grouped once, rendered as
+  // script-free <details> rows (the dashboard stays zero-JS)
+  const evBySession = new Map<string, UsageEvent[]>()
+  for (const e of events) {
+    const k = `${e.agent}:${e.sessionId}`
+    const arr = evBySession.get(k)
+    if (arr) arr.push(e)
+    else evBySession.set(k, [e])
+  }
+  const compsBySession = new Map<string, Compaction[]>()
+  for (const c of opts.compactions ?? []) {
+    const arr = compsBySession.get(c.sessionId)
+    if (arr) arr.push(c)
+    else compsBySession.set(c.sessionId, [c])
+  }
+  const fmtSpan = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60}m` : `${m}m`)
+  const fmtGapDur = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m` : `${m}m`)
+  // UTC slice "06-07 05:54" — deterministic, matches the UTC date column
+  const stamp = (iso: string) => iso.slice(5, 16).replace('T', ' ')
+  const sessionDetail = (s: (typeof sessions)[number]): string => {
+    const sev = evBySession.get(`${s.agent}:${s.sessionId}`) ?? []
+    const gaps = idleGaps(sev)
+    const comps = s.agent === 'claude-code' ? (compsBySession.get(s.sessionId) ?? []) : []
+    const parts: string[] = []
+    if (gaps.length) {
+      const longest = [...gaps].sort((a, b) => b.minutes - a.minutes).slice(0, 3)
+      parts.push(
+        `<div><b>${gaps.length} gap${gaps.length === 1 ? '' : 's'}</b> &gt;5min — longest ${longest
+          .map((g) => `${fmtGapDur(g.minutes)} (${stamp(g.start)} → ${stamp(g.end)})`)
+          .join(' · ')}</div>`,
+      )
+    }
+    if (comps.length) {
+      const shed = comps.reduce((n, c) => n + Math.max(0, c.preTokens - c.postTokens), 0)
+      const auto = comps.filter((c) => c.trigger === 'auto').length
+      parts.push(
+        `<div><b>${comps.length} compaction${comps.length === 1 ? '' : 's'}</b> (${auto} auto) · ~${fmtTokens(shed)} tokens shed</div>`,
+      )
+    }
+    const sacts = byActivity(sev)
+    if (sacts.length)
+      parts.push(
+        `<div>activity: ${sacts.slice(0, 4).map((a) => `${esc(a.activity)} ${Math.round(a.share * 100)}%`).join(' · ')}</div>`,
+      )
+    const stls = toolUsage(sev).slice(0, 5)
+    if (stls.length) parts.push(`<div>tools: ${stls.map(([name, n]) => `${esc(name)} ×${n}`).join(' · ')}</div>`)
+    return `<div class="sdetail">${parts.join('') || 'no detail — quiet session'}</div>`
+  }
+  const srow = (s: (typeof sessions)[number]) =>
+    `<span class="dim">${esc(s.start.slice(0, 10))}</span><span>${esc(s.project)}</span><span>${esc(
+      s.agent,
+    )}</span><span class="num">${fmtSpan(s.minutes)}</span><span class="num">${s.turns}</span><span class="num">${s.gaps || '—'}</span><span class="num">${s.compactions || '—'}</span><span class="num">${money(s.cost)}</span>`
   const sessionsHtml = sessions.length
-    ? `<section><h2>Top sessions</h2><table>
-<thead><tr><th>date</th><th>project</th><th>agent</th><th class="num">span</th><th class="num">turns</th><th class="num" title="pauses >5min — each expires the prompt cache">gaps</th><th class="num" title="context compactions">compact</th><th class="num">cost</th></tr></thead>
-<tbody>${sessions
-        .map(
-          (s) =>
-            `<tr><td class="dim">${esc(s.start.slice(0, 10))}</td><td>${esc(s.project)}</td><td>${esc(
-              s.agent,
-            )}</td><td class="num">${s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`}</td><td class="num">${s.turns}</td><td class="num">${s.gaps || '—'}</td><td class="num">${s.compactions || '—'}</td><td class="num">${money(s.cost)}</td></tr>`,
-        )
-        .join('\n')}</tbody></table></section>`
+    ? `<section><h2>Top sessions <span class="dim">(click a row for gaps, compactions, activity)</span></h2>
+<div class="srow shead"><span>date</span><span>project</span><span>agent</span><span class="num">span</span><span class="num">turns</span><span class="num" title="pauses >5min — each expires the prompt cache">gaps</span><span class="num" title="context compactions">compact</span><span class="num">cost</span></div>
+${sessions
+        .map((s) => `<details class="sess"><summary class="srow">${srow(s)}</summary>${sessionDetail(s)}</details>`)
+        .join('\n')}</section>`
     : ''
 
   const tools = toolUsage(events).slice(0, 10)
@@ -203,6 +251,13 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
   .legend span { margin-right:14px; }
   .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
   .c0{background:#34d399}.c1{background:#22d3ee}.c2{background:#a78bfa}.c3{background:#f472b6}.c4{background:#e3b341}.c5{background:#fb923c}.c6{background:#8b949e}
+  .srow { display:grid; grid-template-columns:90px 1fr 100px 64px 56px 48px 64px 70px; gap:0 12px; font-size:13px; padding:6px 0; border-bottom:1px solid #21262d; align-items:baseline; }
+  .shead { color:#8b949e; border-bottom:1px solid #30363d; padding:4px 0 8px; }
+  details.sess summary { cursor:pointer; list-style:none; }
+  details.sess summary::-webkit-details-marker { display:none; }
+  details.sess[open] summary { background:#1c2330; }
+  .sdetail { padding:8px 0 10px 102px; font-size:12px; color:#8b949e; line-height:1.8; border-bottom:1px solid #21262d; }
+  .sdetail b { color:#e6edf3; font-weight:600; }
   .chart { display:flex; align-items:flex-end; gap:2px; height:120px; }
   .chart.small { height:60px; }
   .col { flex:1; display:flex; align-items:flex-end; height:100%; }
