@@ -22,7 +22,7 @@ import {
 import { byActivity, type ActivityBucket } from './activities.js'
 
 export interface TeamReport {
-  schema: 'vibevitals.report.v1'
+  schema: 'vibecheck.report.v1'
   generatedAt: string
   /** Reporting window. from/to are local dates derived from the data. */
   period: { days: number | null; from: string | null; to: string | null }
@@ -64,7 +64,7 @@ function gitIdentity(): { name: string | null; email: string | null } {
 export function teamReport(events: UsageEvent[], opts: ExportOptions = {}): TeamReport {
   const days = byDay(events).filter((d) => d.key !== 'unknown')
   const report: TeamReport = {
-    schema: 'vibevitals.report.v1',
+    schema: 'vibecheck.report.v1',
     generatedAt: (opts.now ?? new Date()).toISOString(),
     period: {
       days: opts.days ?? null,

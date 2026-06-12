@@ -157,7 +157,7 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>vibevitals — ${esc(period)}</title>
+<title>vibecheck — ${esc(period)}</title>
 <style>
   :root { color-scheme: dark; }
   body { background:#0d1117; color:#e6edf3; font-family:'SF Mono','Cascadia Code',Menlo,Consolas,monospace; margin:0; padding:32px; }
@@ -201,7 +201,7 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
 </style>
 </head>
 <body><div class="wrap">
-<h1>🩺 vibevitals</h1>
+<h1>🩺 vibecheck</h1>
 <div class="sub">${esc(period)} · generated ${esc((opts.now ?? new Date()).toISOString().slice(0, 16).replace('T', ' '))} · static file, all data stays local</div>
 ${vitals}
 ${budgetHtml}
@@ -215,7 +215,7 @@ ${barTable(byProject(events).slice(0, 10), 'By project')}
 ${branches.length > 1 ? barTable(branches.slice(0, 10), 'By branch') : ''}
 ${sessionsHtml}
 ${toolsHtml}
-<footer>npx vibevitals · costs are API-list-price estimates · nothing leaves your machine</footer>
+<footer>npx vibe-check · costs are API-list-price estimates · nothing leaves your machine</footer>
 </div></body></html>
 `
 }

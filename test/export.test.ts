@@ -45,7 +45,7 @@ describe('teamReport (the enterprise seam)', () => {
     expect(json).not.toContain('"s1"')
     expect(r.byProject).toBeUndefined()
     expect(r.byBranch).toBeUndefined()
-    expect(r.schema).toBe('vibevitals.report.v1')
+    expect(r.schema).toBe('vibecheck.report.v1')
   })
 
   it('derives the period from the data', () => {

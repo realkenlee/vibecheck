@@ -89,7 +89,7 @@ export function diagnose(events: UsageEvent[]): Insight[] {
     const s = sessions[0]
     out.push({
       level: 'info',
-      text: `One session is ${pct(s.cost / t.cost)} of all spend (${usd(s.cost)}, ${s.project}). Run \`vibevitals sessions\` to see what it did.`,
+      text: `One session is ${pct(s.cost / t.cost)} of all spend (${usd(s.cost)}, ${s.project}). Run \`vibecheck sessions\` to see what it did.`,
     })
   }
 

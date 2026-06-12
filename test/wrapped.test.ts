@@ -56,7 +56,7 @@ describe('wrappedSvg', () => {
     expect(svg).not.toContain('secret-codename')
     expect(svg).not.toContain('secret-feature')
     expect(svg).toContain('claude-sonnet-4-6') // model name is fine
-    expect(svg).toContain('npx vibevitals')
+    expect(svg).toContain('npx vibe-check')
   })
 
   it('escapes markup in model names', () => {

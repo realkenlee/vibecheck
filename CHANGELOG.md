@@ -1,8 +1,11 @@
 # Changelog
 
-All notable changes to vibevitals. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
+All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0] — 2026-06-11
+
+### Changed
+- **Renamed: vibevitals → vibecheck.** npm package is `vibe-check` (unhyphenated name is squatted); the installed command is `vibecheck`. Export schema is now `vibecheck.report.v1`; budget env var is now `VIBECHECK_BUDGET`. Release binaries are named `vibecheck-<platform>`.
 
 ### Added
 - Doctor's note for **cache thrash** — warns when cache-write premium (1.25× input rate) exceeds what cache reads saved
@@ -10,8 +13,10 @@ All notable changes to vibevitals. Format follows [Keep a Changelog](https://kee
 
 ## [0.3.0] — 2026-06-11
 
+> Released under the old name, `vibevitals`.
+
 ### Added
-- `vibevitals months` — month-over-month spend trend with Δ% column
+- `vibecheck months` — month-over-month spend trend with Δ% column
 - `--version` / `-v` flag (version is compiled into the single-file binaries)
 - Loud input validation: `--month 2026-13`, `--days 0`, `--budget -5` now exit 1 with a reason instead of silently reporting $0
 - Pricing freshness disclosure in the report footer ("prices as of YYYY-MM")
@@ -25,13 +30,13 @@ All notable changes to vibevitals. Format follows [Keep a Changelog](https://kee
 
 ### Added
 - **Single-file binaries** for macOS (arm64/x64), Linux (arm64/x64), Windows — built with `bun build --compile`, attached to GitHub Releases with SHA256SUMS. No Node required
-- `vibevitals web` — self-contained static HTML dashboard: zero scripts, zero external resources, all data stays local
-- `vibevitals wrapped` — shareable 1200×630 "AI Coding Wrapped" SVG card (aggregate numbers only; tested to never contain project or branch names)
-- `vibevitals sessions` — most expensive sessions with wall-clock span, turns, dominant project
-- `vibevitals export` — versioned `vibevitals.report.v1` team report: aggregates only, project/branch names opt-in via `--include-projects`, `--anonymous` strips git identity
+- `vibecheck web` — self-contained static HTML dashboard: zero scripts, zero external resources, all data stays local
+- `vibecheck wrapped` — shareable 1200×630 "AI Coding Wrapped" SVG card (aggregate numbers only; tested to never contain project or branch names)
+- `vibecheck sessions` — most expensive sessions with wall-clock span, turns, dominant project
+- `vibecheck export` — versioned `vibecheck.report.v1` team report: aggregates only, project/branch names opt-in via `--include-projects`, `--anonymous` strips git identity
 - Doctor's notes — deterministic, threshold-gated diagnosis (cache health, activity skews, subagent share, whale sessions, night-owl hours)
 - Activity attribution ("Where tokens go"): editing / executing / exploring / delegating / planning / reasoning
-- Budget burn-down: `--budget` / `VIBEVITALS_BUDGET` with projection and daily allowance
+- Budget burn-down: `--budget` / `VIBECHECK_BUDGET` with projection and daily allowance
 - `--month YYYY-MM` reconciliation filter
 - Branch attribution (Claude Code records `gitBranch`)
 - CI across Node 18/20/22

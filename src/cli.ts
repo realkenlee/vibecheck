@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// vibevitals — check your vitals. Local-first analytics for AI coding sessions.
+// vibecheck — check your vitals. Local-first analytics for AI coding sessions.
 // Reads ~/.claude/projects and ~/.codex/sessions. Nothing leaves your machine.
 
 import { homedir } from 'node:os'
@@ -55,7 +55,7 @@ function fail(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const envBudget = parseFloat(process.env.VIBEVITALS_BUDGET ?? '')
+  const envBudget = parseFloat(process.env.VIBECHECK_BUDGET ?? '')
   const a: Args = {
     command: 'report',
     json: false,
@@ -95,24 +95,24 @@ function parseArgs(argv: string[]): Args {
     else if (v === '--claude-dir') a.claudeDir = argv[++i]
     else if (v === '--codex-dir') a.codexDir = argv[++i]
     else if (v === '--version' || v === '-v') {
-      console.log(`vibevitals ${VERSION}`)
+      console.log(`vibecheck ${VERSION}`)
       process.exit(0)
     }
     else if (v === '--help' || v === '-h') {
-      console.log(`vibevitals — where do your AI coding tokens go?
+      console.log(`vibecheck — where do your AI coding tokens go?
 
-Usage: vibevitals [options]            personal report (human-readable)
-       vibevitals sessions [options]   most expensive sessions
-       vibevitals months               month-over-month trend
-       vibevitals wrapped [options]    shareable card (--out wrapped.svg)
-       vibevitals web [options]        static HTML dashboard (no server)
-       vibevitals export [options]     aggregates-only team report (JSON)
+Usage: vibecheck [options]            personal report (human-readable)
+       vibecheck sessions [options]   most expensive sessions
+       vibecheck months               month-over-month trend
+       vibecheck wrapped [options]    shareable card (--out wrapped.svg)
+       vibecheck web [options]        static HTML dashboard (no server)
+       vibecheck export [options]     aggregates-only team report (JSON)
 
 Options
   --days <n>           only include the last n days
   --month <YYYY-MM>    only include one calendar month (reconciliation)
   --budget <usd>       monthly soft limit — burn-down + projection
-                       (or set VIBEVITALS_BUDGET)
+                       (or set VIBECHECK_BUDGET)
   --json               machine-readable output (report mode)
   --claude-dir <p>     Claude Code projects dir (default ~/.claude/projects)
   --codex-dir <p>      Codex sessions dir (default ~/.codex/sessions)
@@ -164,7 +164,7 @@ function main() {
       return
     }
     console.log()
-    console.log(bold('  🩺 vibevitals — months') + dim('  ·  month-over-month'))
+    console.log(bold('  🩺 vibecheck — months') + dim('  ·  month-over-month'))
     console.log()
     if (months.length === 0) {
       console.log('  No sessions found.')
@@ -195,7 +195,7 @@ function main() {
 
   if (args.command === 'web') {
     const html = dashboardHtml(events, { days: args.days, budget: args.budget })
-    const path = args.out ?? join(tmpdir(), 'vibevitals.html')
+    const path = args.out ?? join(tmpdir(), 'vibecheck.html')
     writeFileSync(path, html)
     console.log(`wrote ${path} — static file, no server, all data stays local`)
     const opener = process.platform === 'darwin' ? 'open' : process.platform === 'linux' ? 'xdg-open' : null
@@ -224,7 +224,7 @@ function main() {
     if (s.topModel) console.log(`  mostly ${cyan(s.topModel)}` + (s.topActivity ? dim(`  ·  ${Math.floor(s.topActivity.share * 100)}% ${s.topActivity.name}`) : ''))
     if (s.busiestDay) console.log(`  biggest day ${s.busiestDay.date} (${money(s.busiestDay.cost)})  ·  peak hour ${hour}`)
     console.log()
-    console.log(dim('  vibevitals wrapped --out wrapped.svg  →  1200×630 card, safe to share'))
+    console.log(dim('  vibecheck wrapped --out wrapped.svg  →  1200×630 card, safe to share'))
     console.log()
     return
   }
@@ -236,7 +236,7 @@ function main() {
       return
     }
     console.log()
-    console.log(bold('  🩺 vibevitals — sessions') + dim(`  ·  ${args.days ? `last ${args.days} days` : 'all time'}  ·  by cost`))
+    console.log(bold('  🩺 vibecheck — sessions') + dim(`  ·  ${args.days ? `last ${args.days} days` : 'all time'}  ·  by cost`))
     console.log()
     if (sessions.length === 0) {
       console.log('  No sessions found.')
@@ -292,7 +292,7 @@ function main() {
   const period = args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'
 
   console.log()
-  console.log(bold('  🩺 vibevitals') + dim(`  ·  ${period}  ·  all data stays local`))
+  console.log(bold('  🩺 vibecheck') + dim(`  ·  ${period}  ·  all data stays local`))
   console.log()
 
   if (events.length === 0) {
@@ -305,7 +305,7 @@ function main() {
     } else {
       console.log()
       console.log('  If your logs live elsewhere, point me at them:')
-      console.log(dim('    vibevitals --claude-dir <path> --codex-dir <path>'))
+      console.log(dim('    vibecheck --claude-dir <path> --codex-dir <path>'))
     }
     return
   }

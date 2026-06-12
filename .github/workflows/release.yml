@@ -31,14 +31,14 @@ jobs:
           mkdir -p release
           for target in bun-darwin-arm64 bun-darwin-x64 bun-linux-x64 bun-linux-arm64 bun-windows-x64; do
             suffix="${target#bun-}"
-            out="release/vibevitals-${suffix}"
+            out="release/vibecheck-${suffix}"
             [ "$suffix" = "windows-x64" ] && out="${out}.exe"
             bun build --compile --minify --target="$target" dist/cli.js --outfile "$out"
           done
           ls -lh release/
 
       - name: Smoke-test the linux binary
-        run: ./release/vibevitals-linux-x64 --claude-dir /tmp/nope --codex-dir /tmp/nope
+        run: ./release/vibecheck-linux-x64 --claude-dir /tmp/nope --codex-dir /tmp/nope
 
       - name: Checksums
         run: cd release && shasum -a 256 * > SHA256SUMS
@@ -48,6 +48,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" release/* \
-            --title "vibevitals ${GITHUB_REF_NAME}" \
+            --title "vibecheck ${GITHUB_REF_NAME}" \
             --generate-notes \
-            --notes "Single-file executables — no Node/npm required. Verify with SHA256SUMS. Or just: \`npx vibevitals\`"
+            --notes "Single-file executables — no Node/npm required. Verify with SHA256SUMS. Or just: \`npx vibe-check\`"

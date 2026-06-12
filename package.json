@@ -1,18 +1,18 @@
 {
-  "name": "vibevitals",
-  "version": "0.3.0",
+  "name": "vibe-check",
+  "version": "0.4.0",
   "description": "Know where your AI coding tokens go — local-first analytics for Claude Code & Codex: spend, activities, budget burn-down. Free forever.",
   "license": "MIT",
   "author": "Ken Lee <khflee@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/realkenlee/vibevitals.git"
+    "url": "git+https://github.com/realkenlee/vibecheck.git"
   },
-  "homepage": "https://github.com/realkenlee/vibevitals#readme",
-  "bugs": "https://github.com/realkenlee/vibevitals/issues",
+  "homepage": "https://github.com/realkenlee/vibecheck#readme",
+  "bugs": "https://github.com/realkenlee/vibecheck/issues",
   "type": "module",
   "bin": {
-    "vibevitals": "dist/cli.js"
+    "vibecheck": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +25,7 @@
     "build": "tsc",
     "test": "vitest run",
     "dev": "tsc && node dist/cli.js",
-    "compile": "tsc && bun build --compile --minify dist/cli.js --outfile vibevitals",
+    "compile": "tsc && bun build --compile --minify dist/cli.js --outfile vibecheck",
     "prepublishOnly": "npm test && npm run build"
   },
   "keywords": [

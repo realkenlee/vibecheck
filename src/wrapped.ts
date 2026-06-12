@@ -116,7 +116,7 @@ export function wrappedSvg(s: WrappedStats, periodLabel: string): string {
   <text x="80" y="170" class="period">${esc(periodLabel)}</text>
 ${grid}
   <text x="80" y="520" class="footer">${esc(footer)}</text>
-  <text x="80" y="556" class="url">npx vibevitals · all data stays local</text>
+  <text x="80" y="556" class="url">npx vibe-check · all data stays local</text>
 </svg>
 `
 }
