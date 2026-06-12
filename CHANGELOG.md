@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.9.0] — 2026-06-12
 
 ### Added
 - **`vibecheck sessions <id>`** — drill into one session (any substring of the id works): longest gaps with timestamps, compaction receipts, activity split, top tools; `--json` includes the full gap and compaction lists. The sessions table now shows each session's id, and `idleGaps()` is exported from analytics
