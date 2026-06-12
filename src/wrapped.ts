@@ -4,8 +4,8 @@
 // aggregate numbers and model/activity names only — never project names,
 // branches, paths, or prompts.
 
-import type { UsageEvent } from './schema.js'
-import { totals, byModel, byDay, hourlyHistogram } from './analytics.js'
+import type { Compaction, UsageEvent } from './schema.js'
+import { totals, byModel, byDay, bySession, hourlyHistogram } from './analytics.js'
 import { byActivity } from './activities.js'
 
 export interface WrappedStats {
@@ -21,9 +21,13 @@ export interface WrappedStats {
   busiestDay: { date: string; cost: number } | null
   /** 0-23 local hour with the most events. */
   peakHour: number | null
+  /** Turn count of the longest session — a number, never a name. */
+  longestSessionTurns: number | null
+  /** Context compactions survived (Claude Code logs them; 0 when unknown). */
+  compactions: number
 }
 
-export function wrappedStats(events: UsageEvent[]): WrappedStats {
+export function wrappedStats(events: UsageEvent[], compactions: Compaction[] = []): WrappedStats {
   const t = totals(events)
   const days = byDay(events).filter((d) => d.key !== 'unknown')
   const models = byModel(events).filter((m) => m.key !== 'unknown')
@@ -31,6 +35,7 @@ export function wrappedStats(events: UsageEvent[]): WrappedStats {
   const hours = hourlyHistogram(events)
   const maxHour = Math.max(...hours)
   const busiest = [...days].sort((a, b) => b.cost - a.cost)[0]
+  const longest = bySession(events).sort((a, b) => b.turns - a.turns)[0]
 
   return {
     tokens: t.inputTokens + t.outputTokens + t.cacheReadTokens + t.cacheWriteTokens,
@@ -43,6 +48,8 @@ export function wrappedStats(events: UsageEvent[]): WrappedStats {
     topActivity: acts[0] ? { name: acts[0].activity, share: acts[0].share } : null,
     busiestDay: busiest ? { date: busiest.key, cost: busiest.cost } : null,
     peakHour: maxHour > 0 ? hours.indexOf(maxHour) : null,
+    longestSessionTurns: longest ? longest.turns : null,
+    compactions: compactions.length,
   }
 }
 
@@ -94,6 +101,15 @@ export function wrappedSvg(s: WrappedStats, periodLabel: string): string {
     .filter(Boolean)
     .join('   ·   ')
 
+  const footer2 = [
+    s.longestSessionTurns && s.longestSessionTurns >= 100
+      ? `longest session ${s.longestSessionTurns.toLocaleString('en-US')} turns`
+      : null,
+    s.compactions >= 3 ? `${s.compactions} compactions survived` : null,
+  ]
+    .filter(Boolean)
+    .join('   ·   ')
+
   return `<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
@@ -115,8 +131,8 @@ export function wrappedSvg(s: WrappedStats, periodLabel: string): string {
   <text x="80" y="130" class="title">🩺 AI Coding Wrapped</text>
   <text x="80" y="170" class="period">${esc(periodLabel)}</text>
 ${grid}
-  <text x="80" y="520" class="footer">${esc(footer)}</text>
-  <text x="80" y="556" class="url">npx vibe-check · all data stays local</text>
+  <text x="80" y="510" class="footer">${esc(footer)}</text>${footer2 ? `\n  <text x="80" y="542" class="footer">${esc(footer2)}</text>` : ''}
+  <text x="80" y="574" class="url">npx vibe-check · all data stays local</text>
 </svg>
 `
 }

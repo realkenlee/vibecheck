@@ -247,7 +247,7 @@ function main() {
   }
 
   if (args.command === 'wrapped') {
-    const s = wrappedStats(events)
+    const s = wrappedStats(events, compactions)
     const period = args.days ? `last ${args.days} days` : 'all time'
     if (args.json) {
       console.log(JSON.stringify(s, null, 2))
@@ -266,6 +266,11 @@ function main() {
     console.log(`  ${s.sessions} sessions over ${s.activeDays} active days  ·  longest streak ${bold(String(s.streak))} days`)
     if (s.topModel) console.log(`  mostly ${cyan(s.topModel)}` + (s.topActivity ? dim(`  ·  ${Math.floor(s.topActivity.share * 100)}% ${s.topActivity.name}`) : ''))
     if (s.busiestDay) console.log(`  biggest day ${s.busiestDay.date} (${money(s.busiestDay.cost)})  ·  peak hour ${hour}`)
+    if (s.longestSessionTurns && s.longestSessionTurns >= 100)
+      console.log(
+        `  longest session ${bold(s.longestSessionTurns.toLocaleString('en-US'))} turns` +
+          (s.compactions >= 3 ? dim(`  ·  ${s.compactions} compactions survived`) : ''),
+      )
     console.log()
     console.log(dim('  vibecheck wrapped --out wrapped.svg  →  1200×630 card, safe to share'))
     console.log()

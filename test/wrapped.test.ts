@@ -48,6 +48,13 @@ describe('wrappedStats', () => {
     expect(s.topActivity!.name).toBe('editing') // 2 of 3 turns by cost
     expect(s.cost).toBeCloseTo(45.0009, 2)
   })
+
+  it('tracks longest session turns and compactions — numbers only, no names', () => {
+    const c = { sessionId: 's2', timestamp: '2026-06-02T11:00:00.000Z', trigger: 'auto', preTokens: 1, postTokens: 1 }
+    const s = wrappedStats(events, [c, c, c])
+    expect(s.longestSessionTurns).toBe(2) // s2 has 2 turns
+    expect(s.compactions).toBe(3)
+  })
 })
 
 describe('wrappedSvg', () => {
@@ -57,6 +64,21 @@ describe('wrappedSvg', () => {
     expect(svg).not.toContain('secret-feature')
     expect(svg).toContain('claude-sonnet-4-6') // model name is fine
     expect(svg).toContain('npx vibe-check')
+  })
+
+  it('shows marathon stats only when they clear the thresholds', () => {
+    // 120-turn session + 3 compactions -> second footer line appears
+    const marathon = Array.from({ length: 120 }, (_, i) =>
+      ev({ timestamp: `2026-06-05T10:${String(i % 60).padStart(2, '0')}:00.000Z` }),
+    )
+    const c = { sessionId: 's1', timestamp: '2026-06-05T10:30:00.000Z', trigger: 'auto', preTokens: 1, postTokens: 1 }
+    const svg = wrappedSvg(wrappedStats(marathon, [c, c, c]), 'all time')
+    expect(svg).toContain('longest session 120 turns')
+    expect(svg).toContain('3 compactions survived')
+    // small sessions, no compactions -> line absent
+    const quiet = wrappedSvg(wrappedStats([ev({}), ev({ sessionId: 's2' })]), 'all time')
+    expect(quiet).not.toContain('longest session')
+    expect(quiet).not.toContain('compactions survived')
   })
 
   it('escapes markup in model names', () => {
