@@ -1,6 +1,6 @@
 {
   "name": "vibe-check",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Know where your AI coding tokens go — local-first analytics for Claude Code & Codex: spend, activities, budget burn-down. Free forever.",
   "license": "MIT",
   "author": "Ken Lee <khflee@gmail.com>",

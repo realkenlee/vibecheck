@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.5.0] — 2026-06-11
 
 ### Added
 - Claude Code parser now extracts **compaction receipts** (`compact_boundary` records → `Compaction` on `ParseResult`: trigger, preTokens, postTokens)
