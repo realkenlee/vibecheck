@@ -64,11 +64,12 @@ Honesty rules: round percentages DOWN; disclose file count parsed and any unpars
 
 ## Doctor's notes — the diagnosis
 
-After the totals, compute these three. Deterministic, threshold-gated: skip any note whose threshold isn't met, and never overstate.
+After the totals, compute these four. Deterministic, threshold-gated: skip any note whose threshold isn't met, and never overstate.
 
 1. **Context tax.** Group events by session, sorted by timestamp. For each session with ≥100 turns: baseline = mean cache-read tokens of its first 25 turns; for every turn from index 100 on, add `max(0, cacheRead − baseline) × cacheReadRate` to the tax. If total tax > $5, report: how many sessions ran past 100 turns, avg late-turn vs early-turn cache-read, and the dollar figure. Framing: a session re-pays its whole history every turn — context is rent, not a purchase; `/compact` or restart between tasks.
 2. **Idle gaps.** Within each session, count turn-to-turn gaps >5 minutes (the prompt cache expires); price each post-gap turn's cache-write tokens at the 1.25× write rate. If ≥10 gaps and > $2, report the count and cost: coming back after a break re-writes the cache at a premium.
 3. **Compaction receipts** (Claude Code). `type === "system"` lines with `subtype === "compact_boundary"` carry `compactMetadata.{trigger, preTokens, postTokens}`. If ≥3 compactions and ≥80% have trigger `"auto"`, report: every one was forced at the context ceiling, shedding on average `preTokens − postTokens` tokens the user had been re-paying every turn — a manual `/compact` between tasks captures that earlier.
+4. **Re-read tax** (Claude Code). On assistant lines, `tool_use` blocks with `name === "Read"` carry `input.file_path`; the result's size arrives on a later `user` line's `tool_result` matched by `tool_use_id` (dedupe tool_use ids — the same call can appear on multiple streamed lines of one message). Keep BASENAMES only. Per (session, basename): repeats = reads − 1; repeat bytes = `bytes × (reads − 1) / reads`. If total repeats ≥50 and repeat bytes ≥200KB, report the repeat count, total size re-entering context, and the hottest file's max reads in one session. Never echo file names into anything shareable.
 
 ## Privacy
 
