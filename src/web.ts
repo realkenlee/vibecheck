@@ -45,6 +45,9 @@ function barTable(rows: { key: string; cost: number; tokens: number; events: num
 
 export interface WebOptions {
   days?: number | null
+  /** Pre-built period label (e.g. "2026-05 · project api") — the dashboard is a
+   *  local surface, so active filters are shown by name. Overrides `days`. */
+  period?: string
   budget?: number | null
   now?: Date
   compactions?: Compaction[]
@@ -54,7 +57,7 @@ export interface WebOptions {
 export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): string {
   const t = totals(events)
   const allTokens = t.inputTokens + t.outputTokens + t.cacheReadTokens + t.cacheWriteTokens
-  const period = opts.days ? `last ${opts.days} days` : 'all time'
+  const period = opts.period ?? (opts.days ? `last ${opts.days} days` : 'all time')
   const acts = byActivity(events)
   const days = byDay(events).filter((d) => d.key !== 'unknown')
   const recent = days.slice(-30)

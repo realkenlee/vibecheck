@@ -317,7 +317,7 @@ function main() {
   }
 
   if (args.command === 'web') {
-    const html = dashboardHtml(events, { days: args.days, budget: args.budget, compactions, fileReads })
+    const html = dashboardHtml(events, { days: args.days, period: periodLabel(args), budget: args.budget, compactions, fileReads })
     const path = args.out ?? join(tmpdir(), 'vibecheck.html')
     writeFileSync(path, html)
     console.log(`wrote ${path} — static file, no server, all data stays local`)

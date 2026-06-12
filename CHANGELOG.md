@@ -7,6 +7,9 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ### Added
 - **`--project <name>` / `--branch <name>` filters** — scope any command (report, doctor, sessions, web, wrapped, export) to one project or git branch; any substring works, case-insensitive. A filter that matches nothing fails loudly with your top names instead of reporting $0. Compactions and file reads are scoped via the surviving sessions. The shareable wrapped card says "filtered" but never the name
 
+### Fixed
+- The `web` dashboard's period label now reflects active filters — a `--month` (or `--project`/`--branch`) scoped dashboard used to title itself "all time"
+
 ## [0.10.0] — 2026-06-12
 
 ### Added

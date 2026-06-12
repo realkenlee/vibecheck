@@ -40,6 +40,12 @@ describe('web dashboard', () => {
     expect(html).toContain('claude-sonnet-4-6')
   })
 
+  it('shows the active filter in the period label (web is a local surface)', () => {
+    const scoped = dashboardHtml(events, { period: '2026-05 · project api' })
+    expect(scoped).toContain('2026-05 · project api')
+    expect(scoped).not.toContain('all time')
+  })
+
   it('shows the months trend only when usage spans multiple months', () => {
     expect(html).not.toContain('By month') // both events in 2026-06
     const multi = dashboardHtml([ev({}), ev({ timestamp: '2026-05-05T10:00:00.000Z' })], {})
