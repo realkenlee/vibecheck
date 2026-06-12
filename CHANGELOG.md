@@ -5,6 +5,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **`vibecheck doctor`** — just the diagnosis: all doctor's notes, `--json` for machine-readable, teaching empty states
 - The `web` dashboard's doctor's notes now include compaction receipts (compactions are threaded through `WebOptions`)
 - The zero-install skill now specifies the three highest-value doctor's notes (context tax, idle gaps, compaction receipts) with exact thresholds
 

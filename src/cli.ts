@@ -36,7 +36,7 @@ import type { UsageEvent } from './schema.js'
 import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
 
 interface Args {
-  command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months'
+  command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months' | 'doctor'
   json: boolean
   days: number | null
   month: string | null
@@ -70,7 +70,7 @@ function parseArgs(argv: string[]): Args {
   }
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i]
-    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months'))
+    if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months' || v === 'doctor'))
       a.command = v
     else if (v === '--json') a.json = true
     else if (v === '--days') {
@@ -102,6 +102,7 @@ function parseArgs(argv: string[]): Args {
       console.log(`vibecheck — where do your AI coding tokens go?
 
 Usage: vibecheck [options]            personal report (human-readable)
+       vibecheck doctor [options]     just the diagnosis — doctor's notes only
        vibecheck sessions [options]   most expensive sessions
        vibecheck months               month-over-month trend
        vibecheck wrapped [options]    shareable card (--out wrapped.svg)
@@ -192,6 +193,40 @@ function main() {
         ),
       ),
     )
+    console.log()
+    return
+  }
+
+  if (args.command === 'doctor') {
+    const notes = diagnose(events, compactions)
+    if (args.json) {
+      console.log(JSON.stringify(notes, null, 2))
+      return
+    }
+    console.log()
+    console.log(
+      bold('  🩺 vibecheck — doctor') +
+        dim(`  ·  ${args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'}`),
+    )
+    console.log()
+    if (notes.length === 0) {
+      if (events.length === 0) {
+        console.log('  No sessions found.')
+        console.log(dim('  Looked in your Claude Code and Codex log dirs — point me elsewhere with'))
+        console.log(dim('  --claude-dir / --codex-dir, or widen an active --days/--month filter.'))
+      } else {
+        console.log(`  Nothing to diagnose yet — the doctor wants ≥50 turns and ≥$1 of usage`)
+        console.log(`  before offering opinions (found ${events.length} turns).`)
+      }
+      console.log()
+      return
+    }
+    for (const n of notes) {
+      const mark = n.level === 'warn' ? yellow('⚠') : n.level === 'good' ? green('✓') : dim('·')
+      console.log(`  ${mark} ${n.level === 'warn' ? yellow(n.text) : n.level === 'good' ? green(n.text) : n.text}`)
+    }
+    console.log()
+    console.log(dim(`  Full numbers: \`vibecheck\` · costs are API-list-price estimates (prices as of ${PRICES_AS_OF})`))
     console.log()
     return
   }

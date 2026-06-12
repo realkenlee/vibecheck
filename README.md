@@ -90,6 +90,7 @@ npx vibe-check --days 30         # last 30 days
 npx vibe-check --month 2026-05   # one calendar month (reconciliation)
 npx vibe-check months            # month-over-month trend with Δ%
 npx vibe-check --budget 200      # monthly soft limit → burn-down + projection
+npx vibe-check doctor            # just the diagnosis — doctor's notes only
 npx vibe-check sessions          # most expensive sessions, span + turns
 npx vibe-check wrapped --out wrapped.svg   # shareable card (aggregates only)
 npx vibe-check web               # static HTML dashboard — no server, opens in browser

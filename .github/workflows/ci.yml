@@ -21,7 +21,9 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: CLI smoke test (empty dirs)
-        run: node dist/cli.js --claude-dir /tmp/nope --codex-dir /tmp/nope
+        run: |
+          node dist/cli.js --claude-dir /tmp/nope --codex-dir /tmp/nope
+          node dist/cli.js doctor --claude-dir /tmp/nope --codex-dir /tmp/nope
       - name: CLI rejects bad input loudly (never silently $0)
         run: |
           ! node dist/cli.js --month 2026-13
