@@ -96,6 +96,14 @@ describe('claude-code parser', () => {
     expect(c.sessionId).toBe('fixture-session')
   })
 
+  it('extracts turn_duration records, skipping zero durations', () => {
+    expect(r.turnDurations).toHaveLength(1)
+    const t = r.turnDurations![0]
+    expect(t.ms).toBe(45_000)
+    expect(t.sessionId).toBe('fixture-session')
+    expect(t.timestamp).toBe('2026-06-01T11:46:00.000Z')
+  })
+
   it('extracts gitBranch when present, null otherwise', () => {
     expect(r.events.find((e) => e.inputTokens === 100)!.gitBranch).toBe('main')
     expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.gitBranch).toBe('feat/q2-migration')

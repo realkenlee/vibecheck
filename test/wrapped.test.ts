@@ -55,6 +55,13 @@ describe('wrappedStats', () => {
     expect(s.longestSessionTurns).toBe(2) // s2 has 2 turns
     expect(s.compactions).toBe(3)
   })
+
+  it('sums turn durations into agent hours — runtime, not wall-clock', () => {
+    const td = (ms: number) => ({ sessionId: 's1', timestamp: '2026-06-01T10:00:00.000Z', ms })
+    expect(wrappedStats(events, [], [td(5_400_000)]).agentHours).toBeCloseTo(1.5)
+    expect(wrappedStats(events, [], [td(3_600_000), td(1_800_000)]).agentHours).toBeCloseTo(1.5)
+    expect(wrappedStats(events).agentHours).toBeNull() // no records (codex) -> null, not 0
+  })
 })
 
 describe('wrappedSvg', () => {
@@ -79,6 +86,15 @@ describe('wrappedSvg', () => {
     const quiet = wrappedSvg(wrappedStats([ev({}), ev({ sessionId: 's2' })]), 'all time')
     expect(quiet).not.toContain('longest session')
     expect(quiet).not.toContain('compactions survived')
+  })
+
+  it('shows agent runtime only past an hour', () => {
+    const td = (ms: number) => ({ sessionId: 's1', timestamp: '2026-06-05T10:00:00.000Z', ms })
+    const svg = wrappedSvg(wrappedStats([ev({})], [], [td(8_280_000)]), 'all time')
+    expect(svg).toContain('2.3h of agent runtime')
+    // under an hour -> line absent (a "0.4h" brag is no brag)
+    const quiet = wrappedSvg(wrappedStats([ev({})], [], [td(1_500_000)]), 'all time')
+    expect(quiet).not.toContain('agent runtime')
   })
 
   it('escapes markup in model names', () => {

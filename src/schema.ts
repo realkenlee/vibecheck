@@ -45,6 +45,19 @@ export interface FileRead {
   bytes: number
 }
 
+/**
+ * A completed turn's measured duration (Claude Code `turn_duration` records).
+ * Summed, these are agent runtime — parallel subagents each log their own
+ * turns, so totals can exceed wall-clock time. Durations are plain numbers
+ * and safe on every surface, including `wrapped`.
+ */
+export interface TurnDuration {
+  sessionId: string
+  /** ISO 8601 */
+  timestamp: string
+  ms: number
+}
+
 /** A context compaction recorded by the agent (Claude Code `compact_boundary`). */
 export interface Compaction {
   sessionId: string
@@ -71,4 +84,6 @@ export interface ParseResult {
   compactions?: Compaction[]
   /** Read-tool invocations, when the agent records them (Claude Code only). */
   fileReads?: FileRead[]
+  /** Per-turn durations, when the agent records them (Claude Code only). */
+  turnDurations?: TurnDuration[]
 }

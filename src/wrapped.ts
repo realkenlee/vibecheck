@@ -4,7 +4,7 @@
 // aggregate numbers and model/activity names only — never project names,
 // branches, paths, or prompts.
 
-import type { Compaction, UsageEvent } from './schema.js'
+import type { Compaction, TurnDuration, UsageEvent } from './schema.js'
 import { totals, byModel, byDay, bySession, hourlyHistogram } from './analytics.js'
 import { byActivity } from './activities.js'
 
@@ -25,9 +25,16 @@ export interface WrappedStats {
   longestSessionTurns: number | null
   /** Context compactions survived (Claude Code logs them; 0 when unknown). */
   compactions: number
+  /** Summed turn durations (Claude Code logs them; null when unrecorded).
+   *  Parallel subagents each log their own turns — this is runtime, not wall-clock. */
+  agentHours: number | null
 }
 
-export function wrappedStats(events: UsageEvent[], compactions: Compaction[] = []): WrappedStats {
+export function wrappedStats(
+  events: UsageEvent[],
+  compactions: Compaction[] = [],
+  turnDurations: TurnDuration[] = [],
+): WrappedStats {
   const t = totals(events)
   const days = byDay(events).filter((d) => d.key !== 'unknown')
   const models = byModel(events).filter((m) => m.key !== 'unknown')
@@ -50,7 +57,13 @@ export function wrappedStats(events: UsageEvent[], compactions: Compaction[] = [
     peakHour: maxHour > 0 ? hours.indexOf(maxHour) : null,
     longestSessionTurns: longest ? longest.turns : null,
     compactions: compactions.length,
+    agentHours: runMs(turnDurations),
   }
+}
+
+function runMs(turnDurations: TurnDuration[]): number | null {
+  const ms = turnDurations.reduce((a, t) => a + t.ms, 0)
+  return ms > 0 ? ms / 3_600_000 : null
 }
 
 /** Longest run of consecutive YYYY-MM-DD dates (input sorted ascending). */
@@ -71,6 +84,7 @@ export function longestStreak(sortedDays: string[]): number {
 const fmtTokens = (n: number) =>
   n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${(n / 1e3).toFixed(0)}k`
 const fmtMoney = (n: number) => `$${n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toFixed(0)}`
+export const fmtHours = (h: number) => (h >= 10 ? `${Math.round(h)}h` : `${h.toFixed(1)}h`)
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** 1200×630 (OG-image size) dark card. Pure string template, zero deps. */
@@ -102,6 +116,7 @@ export function wrappedSvg(s: WrappedStats, periodLabel: string): string {
     .join('   ·   ')
 
   const footer2 = [
+    s.agentHours && s.agentHours >= 1 ? `${fmtHours(s.agentHours)} of agent runtime` : null,
     s.longestSessionTurns && s.longestSessionTurns >= 100
       ? `longest session ${s.longestSessionTurns.toLocaleString('en-US')} turns`
       : null,

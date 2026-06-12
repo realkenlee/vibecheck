@@ -31,7 +31,7 @@ import { PRICES_AS_OF } from './pricing.js'
 import { VERSION } from './version.js'
 import { teamReport } from './export.js'
 import { diagnose } from './insights.js'
-import { wrappedStats, wrappedSvg } from './wrapped.js'
+import { fmtHours, wrappedStats, wrappedSvg } from './wrapped.js'
 import { dashboardHtml } from './web.js'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
@@ -197,6 +197,10 @@ function main() {
   if (args.days) fileReads = filterDays(fileReads, args.days)
   if (args.month) fileReads = filterMonth(fileReads, args.month)
 
+  let turnDurations = claude.turnDurations ?? []
+  if (args.days) turnDurations = filterDays(turnDurations, args.days)
+  if (args.month) turnDurations = filterMonth(turnDurations, args.month)
+
   // A filter that matches nothing fails loudly — a typo'd project name must
   // never read as "you spent $0". (Empty dirs fall through to the empty state.)
   if (args.project) {
@@ -214,10 +218,11 @@ function main() {
     }
   }
   if (args.project || args.branch) {
-    // compactions and file reads carry no project/branch — scope them via the surviving sessions
+    // compactions, file reads, and durations carry no project/branch — scope via surviving sessions
     const keep = new Set(events.map((e) => e.sessionId))
     compactions = compactions.filter((c) => keep.has(c.sessionId))
     fileReads = fileReads.filter((r) => keep.has(r.sessionId))
+    turnDurations = turnDurations.filter((t) => keep.has(t.sessionId))
   }
 
   if (args.command === 'export') {
@@ -327,7 +332,7 @@ function main() {
   }
 
   if (args.command === 'wrapped') {
-    const s = wrappedStats(events, compactions)
+    const s = wrappedStats(events, compactions, turnDurations)
     // the card is built to be shared — say it's scoped, but never to what.
     // A month gets its human name: "June 2026" is the natural wrapped period.
     let period = args.month ? monthLabel(args.month) : args.days ? `last ${args.days} days` : 'all time'
@@ -346,7 +351,10 @@ function main() {
     console.log(bold('  🩺 AI Coding Wrapped') + dim(`  ·  ${period}`))
     console.log()
     console.log(`  ${bold(tokens(s.tokens))} tokens  ·  ${bold(money(s.cost))} API-equivalent  ·  ${green(money(s.cacheSavings) + ' saved by caching')}`)
-    console.log(`  ${s.sessions} sessions over ${s.activeDays} active days  ·  longest streak ${bold(String(s.streak))} days`)
+    console.log(
+      `  ${s.sessions} sessions over ${s.activeDays} active days  ·  longest streak ${bold(String(s.streak))} days` +
+        (s.agentHours && s.agentHours >= 1 ? dim(`  ·  ${fmtHours(s.agentHours)} agent runtime`) : ''),
+    )
     if (s.topModel) console.log(`  mostly ${cyan(s.topModel)}` + (s.topActivity ? dim(`  ·  ${Math.floor(s.topActivity.share * 100)}% ${s.topActivity.name}`) : ''))
     if (s.busiestDay) console.log(`  biggest day ${s.busiestDay.date} (${money(s.busiestDay.cost)})  ·  peak hour ${hour}`)
     if (s.longestSessionTurns && s.longestSessionTurns >= 100)
@@ -387,10 +395,15 @@ function main() {
       const sev = events.filter((e) => e.agent === s.agent && e.sessionId === s.sessionId)
       const gaps = idleGaps(sev)
       const comps = s.agent === 'claude-code' ? compactions.filter((c) => c.sessionId === s.sessionId) : []
+      // measured agent runtime (Claude Code records per-turn durations) vs raw span
+      const activeMs =
+        s.agent === 'claude-code'
+          ? turnDurations.filter((t) => t.sessionId === s.sessionId).reduce((a, t) => a + t.ms, 0)
+          : 0
       if (args.json) {
         console.log(
           JSON.stringify(
-            { ...s, gapList: gaps, compactionList: comps, byActivity: byActivity(sev), byModel: byModel(sev), tools: toolUsage(sev) },
+            { ...s, activeMs, gapList: gaps, compactionList: comps, byActivity: byActivity(sev), byModel: byModel(sev), tools: toolUsage(sev) },
             null,
             2,
           ),
@@ -405,7 +418,13 @@ function main() {
         `  ${bold(s.project)}  ·  ${cyan(s.agent)}  ·  ` +
           `${localDay(s.start)}${localDay(s.end) !== localDay(s.start) ? ` → ${localDay(s.end)}` : ''}`,
       )
-      console.log(`  ${span} span  ·  ${s.turns.toLocaleString('en-US')} turns  ·  ${tokens(s.tokens)} tokens  ·  ${bold(money(s.cost))}`)
+      console.log(
+        `  ${span} span` +
+          (activeMs > 0
+            ? dim(` (${activeMs >= 3_600_000 ? fmtHours(activeMs / 3_600_000) : Math.max(1, Math.round(activeMs / 60_000)) + 'm'} active)`)
+            : '') +
+          `  ·  ${s.turns.toLocaleString('en-US')} turns  ·  ${tokens(s.tokens)} tokens  ·  ${bold(money(s.cost))}`,
+      )
       console.log()
       if (gaps.length) {
         const longest = [...gaps].sort((a, b) => b.minutes - a.minutes).slice(0, 3)

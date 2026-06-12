@@ -2,6 +2,14 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Agent runtime** from Claude Code `turn_duration` records — summed per-turn durations measure how long the agent actually worked (parallel subagents each log their own turns, so totals can exceed wall-clock):
+  - `wrapped` card and summary gain "Nh of agent runtime" (threshold-gated at 1h; plain numbers, safe to share)
+  - `sessions <id>` shows "(Nh active)" next to the span — a 205h-span session can be 12h of real work — and `--json` gains `activeMs`
+  - runtime respects `--days`/`--month`/`--project`/`--branch` like every other stat
+
 ## [0.12.0] — 2026-06-12
 
 ### Added

@@ -19,7 +19,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, basename } from 'node:path'
-import type { Compaction, FileRead, ParseResult, UsageEvent } from '../schema.js'
+import type { Compaction, FileRead, ParseResult, TurnDuration, UsageEvent } from '../schema.js'
 
 interface ClaudeUsage {
   input_tokens?: number
@@ -49,6 +49,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
   // Only the BASENAME is kept — full paths never leave this function.
   const fileReads: FileRead[] = []
   const byReadId = new Map<string, FileRead>()
+  const turnDurations: TurnDuration[] = []
   let skippedLines = 0
   let anonCounter = 0
 
@@ -59,6 +60,15 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       d = JSON.parse(line)
     } catch {
       skippedLines++
+      continue
+    }
+    if (d.type === 'system' && d.subtype === 'turn_duration') {
+      if (typeof d.durationMs === 'number' && d.durationMs > 0)
+        turnDurations.push({
+          sessionId,
+          timestamp: typeof d.timestamp === 'string' ? d.timestamp : '',
+          ms: d.durationMs,
+        })
       continue
     }
     if (d.type === 'system' && d.subtype === 'compact_boundary') {
@@ -153,6 +163,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
     stats: { files: 1, sessions: 1, events: events.length, skippedLines },
     compactions,
     fileReads,
+    turnDurations,
   }
 }
 
@@ -161,6 +172,7 @@ export function parseClaudeDir(root: string): ParseResult {
   const events: UsageEvent[] = []
   const compactions: Compaction[] = []
   const fileReads: FileRead[] = []
+  const turnDurations: TurnDuration[] = []
   let files = 0
   let skippedLines = 0
   const sessions = new Set<string>()
@@ -173,6 +185,7 @@ export function parseClaudeDir(root: string): ParseResult {
     events.push(...r.events)
     compactions.push(...(r.compactions ?? []))
     fileReads.push(...(r.fileReads ?? []))
+    turnDurations.push(...(r.turnDurations ?? []))
     skippedLines += r.stats.skippedLines
   }
   return {
@@ -180,6 +193,7 @@ export function parseClaudeDir(root: string): ParseResult {
     stats: { files, sessions: sessions.size, events: events.length, skippedLines },
     compactions,
     fileReads,
+    turnDurations,
   }
 }
 
