@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.7.0] — 2026-06-12
 
 ### Added
 - Claude Code parser now records **Read-tool invocations** (`FileRead` on `ParseResult`: session, timestamp, file **basename only**, result bytes) — full paths never leave the parser, and these feed local surfaces only (`export`/`wrapped` never see them)
