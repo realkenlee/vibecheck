@@ -40,6 +40,8 @@ interface Args {
   command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months' | 'doctor'
   /** `sessions <id>` — substring of a session id to drill into. */
   sessionId: string | null
+  /** `doctor --fail-on-warn` — exit 1 if any warn-level note fires (CI gate). */
+  failOnWarn: boolean
   json: boolean
   days: number | null
   month: string | null
@@ -62,6 +64,7 @@ function parseArgs(argv: string[]): Args {
   const a: Args = {
     command: 'report',
     sessionId: null,
+    failOnWarn: false,
     json: false,
     days: null,
     month: null,
@@ -77,6 +80,7 @@ function parseArgs(argv: string[]): Args {
     if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months' || v === 'doctor'))
       a.command = v
     else if (i === 1 && a.command === 'sessions' && !v.startsWith('-')) a.sessionId = v
+    else if (v === '--fail-on-warn') a.failOnWarn = true
     else if (v === '--json') a.json = true
     else if (v === '--days') {
       const n = Number(argv[++i])
@@ -121,6 +125,7 @@ Options
   --budget <usd>       monthly soft limit — burn-down + projection
                        (or set VIBECHECK_BUDGET)
   --json               machine-readable output (report mode)
+  --fail-on-warn       doctor only: exit 1 if any ⚠ note fires (CI gate)
   --claude-dir <p>     Claude Code projects dir (default ~/.claude/projects)
   --codex-dir <p>      Codex sessions dir (default ~/.codex/sessions)
   --version            print version and exit
@@ -140,6 +145,8 @@ All analysis is local. Nothing leaves your machine unless you share an export.`)
       fail(`unknown command: ${v}\nCommands: doctor, sessions, months, wrapped, web, export (default: report) — see --help`)
     else fail(`unknown option: ${v} — see --help`)
   }
+  // flag/command mismatches are also loud — a no-op flag must never look like it worked
+  if (a.failOnWarn && a.command !== 'doctor') fail('--fail-on-warn only applies to `vibecheck doctor`')
   return a
 }
 
@@ -215,8 +222,13 @@ function main() {
 
   if (args.command === 'doctor') {
     const notes = diagnose(events, compactions, fileReads)
+    // CI gate: report first, then fail — the diagnosis is the point
+    const gate = () => {
+      if (args.failOnWarn && notes.some((n) => n.level === 'warn')) process.exit(1)
+    }
     if (args.json) {
       console.log(JSON.stringify(notes, null, 2))
+      gate()
       return
     }
     console.log()
@@ -244,6 +256,7 @@ function main() {
     console.log()
     console.log(dim(`  Full numbers: \`vibecheck\` · costs are API-list-price estimates (prices as of ${PRICES_AS_OF})`))
     console.log()
+    gate()
     return
   }
 

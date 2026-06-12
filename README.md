@@ -93,13 +93,20 @@ npx vibe-check --month 2026-05   # one calendar month (reconciliation)
 npx vibe-check months            # month-over-month trend with Δ%
 npx vibe-check --budget 200      # monthly soft limit → burn-down + projection
 npx vibe-check doctor            # just the diagnosis — doctor's notes only
+npx vibe-check doctor --fail-on-warn   # exit 1 on any ⚠ note — CI hygiene gate
 npx vibe-check sessions          # most expensive sessions, span + turns
+npx vibe-check sessions <id>     # drill in: gaps, compactions, activity split
 npx vibe-check wrapped --out wrapped.svg   # shareable card (aggregates only)
 npx vibe-check web               # static HTML dashboard — no server, opens in browser
 npx vibe-check --json            # machine-readable, pipe it anywhere
 ```
 
 Set `VIBECHECK_BUDGET=200` to make the budget bar permanent.
+
+`wrapped` renders a 1200×630 card built to be posted — aggregate numbers only, never project or branch names (sample below uses synthetic data):
+
+<img src="docs/wrapped-sample.svg" alt="AI Coding Wrapped sample card (synthetic data)" width="600">
+
 
 Or as a library:
 

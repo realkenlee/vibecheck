@@ -1,0 +1,36 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <style>
+    text { font-family: 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace; }
+    .title { font-size: 44px; font-weight: 700; fill: url(#accent); }
+    .period { font-size: 22px; fill: #8b949e; }
+    .big { font-size: 56px; font-weight: 700; fill: #e6edf3; }
+    .label { font-size: 20px; fill: #8b949e; }
+    .footer { font-size: 20px; fill: #34d399; }
+    .url { font-size: 18px; fill: #8b949e; }
+  </style>
+  <rect width="1200" height="630" fill="#0d1117"/>
+  <rect x="40" y="40" width="1120" height="550" rx="24" fill="#161b22" stroke="#30363d"/>
+  <text x="80" y="130" class="title">🩺 AI Coding Wrapped</text>
+  <text x="80" y="170" class="period">June 2026</text>
+  <text x="80" y="270" class="big">482.0M</text>
+  <text x="80" y="304" class="label">tokens</text>
+  <text x="440" y="270" class="big">$247</text>
+  <text x="440" y="304" class="label">API-equivalent value</text>
+  <text x="800" y="270" class="big">$1,257</text>
+  <text x="800" y="304" class="label">saved by caching</text>
+  <text x="80" y="420" class="big">86</text>
+  <text x="80" y="454" class="label">sessions</text>
+  <text x="440" y="420" class="big">12d</text>
+  <text x="440" y="454" class="label">longest daily streak</text>
+  <text x="800" y="420" class="big">22:00</text>
+  <text x="800" y="454" class="label">peak coding hour</text>
+  <text x="80" y="510" class="footer">mostly claude-opus-4-8   ·   41% editing   ·   biggest day 2026-06-03 ($39)</text>
+  <text x="80" y="542" class="footer">longest session 2,070 turns   ·   33 compactions survived</text>
+  <text x="80" y="574" class="url">npx vibe-check · all data stays local</text>
+</svg>

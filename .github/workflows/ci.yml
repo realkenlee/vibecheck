@@ -24,6 +24,10 @@ jobs:
         run: |
           node dist/cli.js --claude-dir /tmp/nope --codex-dir /tmp/nope
           node dist/cli.js doctor --claude-dir /tmp/nope --codex-dir /tmp/nope
+          # --fail-on-warn passes when there's nothing to warn about…
+          node dist/cli.js doctor --fail-on-warn --claude-dir /tmp/nope --codex-dir /tmp/nope
+          # …and is rejected outside doctor (loud-validation rule)
+          ! node dist/cli.js --fail-on-warn
       - name: CLI rejects bad input loudly (never silently $0)
         run: |
           ! node dist/cli.js --month 2026-13
