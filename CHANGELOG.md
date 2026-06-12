@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.6.0] — 2026-06-11
 
 ### Added
 - **`vibecheck doctor`** — just the diagnosis: all doctor's notes, `--json` for machine-readable, teaching empty states
