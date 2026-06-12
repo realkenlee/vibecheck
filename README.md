@@ -11,7 +11,7 @@ npx vibe-check
 ```
   🩺 vibecheck  ·  all time  ·  all data stays local
 
-  $239 API-equivalent spend   │   477.8M tokens   │   45 sessions   │   $1,212 saved by caching
+  $239 API-equivalent spend   │   477.8M tokens   │   45 sessions   │   20h agent runtime (≈$12/h)   │   $1,212 saved by caching
 
   Budget (2026-06)   $122 of $200  ▕████████░░░░░░▏ 61%   day 10/30 · projected $367 ⚠ over pace
 

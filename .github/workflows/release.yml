@@ -43,6 +43,20 @@ jobs:
       - name: Checksums
         run: cd release && shasum -a 256 * > SHA256SUMS
 
+      # The release page shows the CHANGELOG section for this version — the
+      # notes are written once, in CHANGELOG.md, and surfaced where users land.
+      # A tag without a CHANGELOG section fails loudly: notes are part of the release.
+      - name: Extract CHANGELOG section
+        run: |
+          awk -v ver="${GITHUB_REF_NAME#v}" \
+            '$0 ~ "^## \\[" ver "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section for ${GITHUB_REF_NAME#v} — write the notes before tagging" >&2
+            exit 1
+          fi
+          printf '\nSingle-file executables — no Node/npm required. Verify with SHA256SUMS. Or just: `npx vibe-check`\n' >> notes.md
+          cat notes.md
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,4 +64,4 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" release/* \
             --title "vibecheck ${GITHUB_REF_NAME}" \
             --generate-notes \
-            --notes "Single-file executables — no Node/npm required. Verify with SHA256SUMS. Or just: \`npx vibe-check\`"
+            --notes-file notes.md

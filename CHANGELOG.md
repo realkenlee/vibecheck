@@ -4,6 +4,10 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Changed
+- GitHub Release pages now show the version's CHANGELOG section as the release notes (the notes are written once, here, and surfaced where users land); a tag without a CHANGELOG section fails the release. Applied retroactively to v0.16.0
+- README sample report shows the agent-runtime vitals entry ("20h agent runtime (≈$12/h)")
+
 ## [0.16.0] — 2026-06-12
 
 ### Added
