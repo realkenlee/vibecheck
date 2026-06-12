@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { diagnose } from '../src/insights.js'
 import type { UsageEvent } from '../src/schema.js'
 
@@ -27,6 +30,16 @@ describe("doctor's notes", () => {
     expect(notes.length).toBeGreaterThan(0)
     for (const n of notes) expect(n.id).toMatch(/^[a-z][a-z-]*[a-z]$/)
     expect(notes.find((n) => n.text.includes('cache hit rate'))?.id).toBe('cache-health')
+  })
+
+  it('documents every id in docs/doctor-notes.md — the export vocabulary must not drift', () => {
+    const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
+    const src = readFileSync(join(root, 'src', 'insights.ts'), 'utf8')
+    const doc = readFileSync(join(root, 'docs', 'doctor-notes.md'), 'utf8')
+    const codeIds = new Set([...src.matchAll(/^\s+id: '([a-z-]+)',$/gm)].map((m) => m[1]))
+    const docIds = new Set([...doc.matchAll(/^\| `([a-z-]+)` \|/gm)].map((m) => m[1]))
+    expect(codeIds.size).toBeGreaterThanOrEqual(14)
+    expect([...docIds].sort()).toEqual([...codeIds].sort())
   })
 
   it('stays silent on thin data', () => {
