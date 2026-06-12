@@ -7,6 +7,9 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ### Added
 - [`docs/doctor-notes.md`](docs/doctor-notes.md) — the doctor's-notes **id vocabulary**: every stable id with its levels, exact thresholds, and meaning, so teams consuming `vibecheck export` can interpret `insights` without reading the source. A test asserts the table and `src/insights.ts` agree on the id list
 
+### Fixed
+- `wrapped --month 2026-06` now labels the card **"June 2026"** — the data was month-scoped but the card still said "all time". Monthly cards are the natural share cadence
+
 ## [0.11.0] — 2026-06-12
 
 ### Added

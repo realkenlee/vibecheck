@@ -12,6 +12,13 @@ export function money(v: number): string {
   return v >= 100 ? `$${Math.round(v).toLocaleString()}` : `$${v.toFixed(2)}`
 }
 
+/** '2026-06' → 'June 2026' — share cards deserve a human label. UTC so the
+ *  label never shifts across timezones. */
+export function monthLabel(m: string): string {
+  const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1))
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
 export function tokens(v: number): string {
   if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`

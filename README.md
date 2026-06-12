@@ -99,6 +99,7 @@ npx vibe-check doctor --fail-on-warn   # exit 1 on any ⚠ note — CI hygiene g
 npx vibe-check sessions          # most expensive sessions, span + turns
 npx vibe-check sessions <id>     # drill in: gaps, compactions, activity split
 npx vibe-check wrapped --out wrapped.svg   # shareable card (aggregates only)
+npx vibe-check wrapped --month 2026-06 --out june.svg   # "AI Coding Wrapped · June 2026"
 npx vibe-check web               # static HTML dashboard — no server, opens in browser
 npx vibe-check --json            # machine-readable, pipe it anywhere
 ```
@@ -159,7 +160,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 101 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 105 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 

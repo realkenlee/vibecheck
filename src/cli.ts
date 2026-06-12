@@ -36,7 +36,7 @@ import { dashboardHtml } from './web.js'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import type { UsageEvent } from './schema.js'
-import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './format.js'
+import { bold, dim, green, yellow, cyan, money, monthLabel, tokens, table, spark } from './format.js'
 
 interface Args {
   command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months' | 'doctor'
@@ -328,8 +328,9 @@ function main() {
 
   if (args.command === 'wrapped') {
     const s = wrappedStats(events, compactions)
-    // the card is built to be shared — say it's scoped, but never to what
-    let period = args.days ? `last ${args.days} days` : 'all time'
+    // the card is built to be shared — say it's scoped, but never to what.
+    // A month gets its human name: "June 2026" is the natural wrapped period.
+    let period = args.month ? monthLabel(args.month) : args.days ? `last ${args.days} days` : 'all time'
     if (args.project || args.branch) period += ' · filtered'
     if (args.json) {
       console.log(JSON.stringify(s, null, 2))
