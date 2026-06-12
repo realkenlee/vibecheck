@@ -90,6 +90,8 @@ into context. Same privacy contract: everything stays local.
 npx vibe-check                   # full report, all time
 npx vibe-check --days 30         # last 30 days
 npx vibe-check --month 2026-05   # one calendar month (reconciliation)
+npx vibe-check --project api     # scope everything to one project (any substring)
+npx vibe-check --branch q2-migration   # …or to one git branch — what did it cost?
 npx vibe-check months            # month-over-month trend with Δ%
 npx vibe-check --budget 200      # monthly soft limit → burn-down + projection
 npx vibe-check doctor            # just the diagnosis — doctor's notes only
@@ -157,7 +159,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 97 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 99 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 

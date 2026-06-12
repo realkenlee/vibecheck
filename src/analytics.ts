@@ -127,6 +127,19 @@ export function filterDays<T extends { timestamp: string }>(events: T[], days: n
   })
 }
 
+/** Keep only events whose project name contains q (case-insensitive). */
+export function filterProject(events: UsageEvent[], q: string): UsageEvent[] {
+  const needle = q.toLowerCase()
+  return events.filter((e) => e.project.toLowerCase().includes(needle))
+}
+
+/** Keep only events whose git branch contains q (case-insensitive).
+ *  Codex events carry no branch info, so this always excludes them. */
+export function filterBranch(events: UsageEvent[], q: string): UsageEvent[] {
+  const needle = q.toLowerCase()
+  return events.filter((e) => e.gitBranch !== null && e.gitBranch.toLowerCase().includes(needle))
+}
+
 // ── session drill-down ────────────────────────────────────────────────────────
 
 /** A pause inside a session long enough to expire the prompt cache (5min TTL). */

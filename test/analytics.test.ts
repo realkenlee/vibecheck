@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { UsageEvent } from '../src/schema.js'
-import { totals, byModel, byDay, byMonth, bySession, idleGaps, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
+import { totals, byModel, byDay, byMonth, bySession, idleGaps, toolUsage, hourlyHistogram, filterDays, filterMonth, filterProject, filterBranch } from '../src/analytics.js'
 import { eventCost, cacheSavings, rateFor } from '../src/pricing.js'
 
 const ev = (over: Partial<UsageEvent>): UsageEvent => ({
@@ -110,6 +110,23 @@ describe('analytics', () => {
     const june = filterMonth(mixed, '2026-06')
     expect(may.length + june.length).toBe(2) // garbage never matches
     expect(filterMonth(mixed, '2026-07')).toHaveLength(0)
+  })
+
+  it('filters by project — any substring, case-insensitive', () => {
+    const mixed = [ev({ project: 'My-API' }), ev({ project: 'webapp' }), ev({ project: 'api-docs' })]
+    expect(filterProject(mixed, 'api').map((e) => e.project)).toEqual(['My-API', 'api-docs'])
+    expect(filterProject(mixed, 'nope')).toHaveLength(0)
+  })
+
+  it('filters by branch and always excludes events with no branch info', () => {
+    const mixed = [
+      ev({ gitBranch: 'feat/Q2-migration' }),
+      ev({ gitBranch: 'main' }),
+      ev({ agent: 'codex', gitBranch: null }), // codex never records a branch
+    ]
+    expect(filterBranch(mixed, 'q2')).toHaveLength(1)
+    expect(filterBranch(mixed, 'main')).toHaveLength(1)
+    expect(filterBranch(mixed, '')).toHaveLength(2) // '' matches every branch, never null
   })
 })
 

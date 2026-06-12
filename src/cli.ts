@@ -22,6 +22,8 @@ import {
   hourlyHistogram,
   filterDays,
   filterMonth,
+  filterProject,
+  filterBranch,
   budgetStatus,
 } from './analytics.js'
 import { byActivity } from './activities.js'
@@ -45,6 +47,9 @@ interface Args {
   json: boolean
   days: number | null
   month: string | null
+  /** Scope everything to one project / git branch (substring match). */
+  project: string | null
+  branch: string | null
   budget: number | null
   out: string | null
   anonymous: boolean
@@ -68,6 +73,8 @@ function parseArgs(argv: string[]): Args {
     json: false,
     days: null,
     month: null,
+    project: null,
+    branch: null,
     budget: isNaN(envBudget) ? null : envBudget,
     out: null,
     anonymous: false,
@@ -92,6 +99,14 @@ function parseArgs(argv: string[]): Args {
       if (!/^\d{4}-\d{2}$/.test(a.month ?? '')) fail(`--month wants YYYY-MM, got: ${a.month}`)
       const mm = Number(a.month!.slice(5))
       if (mm < 1 || mm > 12) fail(`--month wants a month 01–12, got: ${a.month}`)
+    }
+    else if (v === '--project') {
+      a.project = argv[++i]
+      if (!a.project || a.project.startsWith('-')) fail('--project wants a project name (or any part of one)')
+    }
+    else if (v === '--branch') {
+      a.branch = argv[++i]
+      if (!a.branch || a.branch.startsWith('-')) fail('--branch wants a branch name (or any part of one)')
     }
     else if (v === '--budget') {
       const b = Number(argv[++i])
@@ -122,6 +137,8 @@ Usage: vibecheck [options]            personal report (human-readable)
 Options
   --days <n>           only include the last n days
   --month <YYYY-MM>    only include one calendar month (reconciliation)
+  --project <name>     only include one project (any part of the name works)
+  --branch <name>      only include one git branch (Claude Code records branches)
   --budget <usd>       monthly soft limit — burn-down + projection
                        (or set VIBECHECK_BUDGET)
   --json               machine-readable output (report mode)
@@ -150,6 +167,21 @@ All analysis is local. Nothing leaves your machine unless you share an export.`)
   return a
 }
 
+/** "all time · project foo" — every local surface shows its active filters. */
+function periodLabel(args: Args): string {
+  let p = args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'
+  if (args.project) p += ` · project ${args.project}`
+  if (args.branch) p += ` · branch ${args.branch}`
+  return p
+}
+
+/** Top distinct values by event count — guidance for a filter that matched nothing. */
+function topNames(vals: string[]): string {
+  const c = new Map<string, number>()
+  for (const v of vals) c.set(v, (c.get(v) ?? 0) + 1)
+  return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k).join(', ')
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2))
 
@@ -164,6 +196,29 @@ function main() {
   let fileReads = claude.fileReads ?? []
   if (args.days) fileReads = filterDays(fileReads, args.days)
   if (args.month) fileReads = filterMonth(fileReads, args.month)
+
+  // A filter that matches nothing fails loudly — a typo'd project name must
+  // never read as "you spent $0". (Empty dirs fall through to the empty state.)
+  if (args.project) {
+    const before = events
+    events = filterProject(events, args.project)
+    if (events.length === 0 && before.length > 0)
+      fail(`--project "${args.project}" matches nothing — your projects: ${topNames(before.map((e) => e.project))}`)
+  }
+  if (args.branch) {
+    const before = events
+    events = filterBranch(events, args.branch)
+    if (events.length === 0 && before.length > 0) {
+      const names = topNames(before.flatMap((e) => (e.gitBranch === null ? [] : [e.gitBranch])))
+      fail(`--branch "${args.branch}" matches nothing` + (names ? ` — your branches: ${names}` : ' — only Claude Code records branches'))
+    }
+  }
+  if (args.project || args.branch) {
+    // compactions and file reads carry no project/branch — scope them via the surviving sessions
+    const keep = new Set(events.map((e) => e.sessionId))
+    compactions = compactions.filter((c) => keep.has(c.sessionId))
+    fileReads = fileReads.filter((r) => keep.has(r.sessionId))
+  }
 
   if (args.command === 'export') {
     const report = teamReport(events, {
@@ -235,15 +290,14 @@ function main() {
     }
     console.log()
     console.log(
-      bold('  🩺 vibecheck — doctor') +
-        dim(`  ·  ${args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'}`),
+      bold('  🩺 vibecheck — doctor') + dim(`  ·  ${periodLabel(args)}`),
     )
     console.log()
     if (notes.length === 0) {
       if (events.length === 0) {
         console.log('  No sessions found.')
         console.log(dim('  Looked in your Claude Code and Codex log dirs — point me elsewhere with'))
-        console.log(dim('  --claude-dir / --codex-dir, or widen an active --days/--month filter.'))
+        console.log(dim('  --claude-dir / --codex-dir, or widen an active filter (--days/--month/--project/--branch).'))
       } else {
         console.log(`  Nothing to diagnose yet — the doctor wants ≥50 turns and ≥$1 of usage`)
         console.log(`  before offering opinions (found ${events.length} turns).`)
@@ -274,7 +328,9 @@ function main() {
 
   if (args.command === 'wrapped') {
     const s = wrappedStats(events, compactions)
-    const period = args.days ? `last ${args.days} days` : 'all time'
+    // the card is built to be shared — say it's scoped, but never to what
+    let period = args.days ? `last ${args.days} days` : 'all time'
+    if (args.project || args.branch) period += ' · filtered'
     if (args.json) {
       console.log(JSON.stringify(s, null, 2))
       return
@@ -394,7 +450,7 @@ function main() {
       return
     }
     console.log()
-    console.log(bold('  🩺 vibecheck — sessions') + dim(`  ·  ${args.days ? `last ${args.days} days` : 'all time'}  ·  by cost`))
+    console.log(bold('  🩺 vibecheck — sessions') + dim(`  ·  ${periodLabel(args)}  ·  by cost`))
     console.log()
     if (sessions.length === 0) {
       console.log('  No sessions found.')
@@ -452,7 +508,7 @@ function main() {
   }
 
   const t = totals(events)
-  const period = args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'
+  const period = periodLabel(args)
 
   console.log()
   console.log(bold('  🩺 vibecheck') + dim(`  ·  ${period}  ·  all data stays local`))
@@ -462,9 +518,9 @@ function main() {
     console.log('  No sessions found.')
     console.log(dim(`  Looked in: ${args.claudeDir}`))
     console.log(dim(`             ${args.codexDir}`))
-    if (args.days || args.month) {
+    if (args.days || args.month || args.project || args.branch) {
       console.log()
-      console.log(`  Your filter (${args.month ?? `last ${args.days} days`}) may be the reason — try without it.`)
+      console.log(`  Your filter (${periodLabel(args)}) may be the reason — try without it.`)
     } else {
       console.log()
       console.log('  If your logs live elsewhere, point me at them:')
