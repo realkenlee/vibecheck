@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.11.0] — 2026-06-12
 
 ### Added
 - **`--project <name>` / `--branch <name>` filters** — scope any command (report, doctor, sessions, web, wrapped, export) to one project or git branch; any substring works, case-insensitive. A filter that matches nothing fails loudly with your top names instead of reporting $0. Compactions and file reads are scoped via the surviving sessions. The shareable wrapped card says "filtered" but never the name
