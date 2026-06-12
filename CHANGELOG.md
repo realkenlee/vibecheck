@@ -4,6 +4,8 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-06-12
+
 ### Added
 - **Schema-drift issue template** — the drift warning now names which parser drifted ("142 unparseable lines (claude-code 142)") and links a structured report form that asks for counts, versions, and JSON key names only — never transcript lines. Plus a general bug template; drift reports are how the parsers stay correct
 - The worst drift case no longer hides: logs that exist but parse to **zero events** used to print plain "No sessions found" — now that empty state says "your logs had N lines but none parsed — likely schema drift after an agent update" with the report link
