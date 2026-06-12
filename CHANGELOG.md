@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.10.0] — 2026-06-12
 
 ### Added
 - **`vibecheck doctor --fail-on-warn`** — exit 1 when any ⚠ note fires, so teams can gate CI on session hygiene; rejected loudly outside `doctor`
