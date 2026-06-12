@@ -10,6 +10,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 - The zero-install skill now specifies the three highest-value doctor's notes (context tax, idle gaps, compaction receipts) with exact thresholds
 
 ### Fixed
+- `months` no longer prints absurd deltas against near-zero bases (`$0.49 → $114` showed "+23214%") — Δ% needs a ≥$1 prior month
 - Skill spec: session identity is the **.jsonl filename**, not the embedded `sessionId` field (which can differ after resumes) — caught by re-validating a from-spec implementation against the CLI
 
 ## [0.5.0] — 2026-06-11

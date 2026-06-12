@@ -180,7 +180,9 @@ function main() {
           months.map((m, i) => {
             const prev = i > 0 ? months[i - 1].cost : null
             const delta =
-              prev && prev > 0.01
+              // Δ% against a near-zero base is noise, not trend ($0.49 → $114
+              // would print "+23214%") — show a dash until the base is real.
+              prev && prev >= 1
                 ? (() => {
                     const d = Math.round(((m.cost - prev) / prev) * 100)
                     const s = `${d >= 0 ? '+' : ''}${d}%`
