@@ -138,6 +138,37 @@ describe("doctor's notes", () => {
     expect(drift?.text).toContain('2026-05 → 2026-06')
   })
 
+  it('reports auto-forced compactions with their token receipts', () => {
+    const compaction = (trigger: string) => ({
+      sessionId: 's1',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      trigger,
+      preTokens: 160_000,
+      postTokens: 10_000,
+    })
+    const notes = diagnose(fill(60), [compaction('auto'), compaction('auto'), compaction('auto')])
+    const c = notes.find((n) => n.text.includes('compactions were auto-forced'))
+    expect(c?.level).toBe('info')
+    expect(c?.text).toContain('All 3')
+    expect(c?.text).toContain('~150k')
+  })
+
+  it('stays quiet when compactions are mostly manual', () => {
+    const compaction = (trigger: string) => ({
+      sessionId: 's1',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      trigger,
+      preTokens: 160_000,
+      postTokens: 10_000,
+    })
+    const notes = diagnose(fill(60), [
+      compaction('manual'),
+      compaction('manual'),
+      compaction('auto'),
+    ])
+    expect(notes.some((n) => n.text.includes('auto-forced'))).toBe(false)
+  })
+
   it('calls out night-owl usage and sorts warns first', () => {
     // build night timestamps via local-time Date so the test is TZ-independent
     const d = new Date(2026, 5, 5, 2, 0, 0)

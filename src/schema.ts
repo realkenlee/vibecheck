@@ -30,6 +30,17 @@ export interface UsageEvent {
   gitBranch: string | null
 }
 
+/** A context compaction recorded by the agent (Claude Code `compact_boundary`). */
+export interface Compaction {
+  sessionId: string
+  /** ISO 8601 */
+  timestamp: string
+  /** "auto" = forced at the context ceiling; "manual" = user ran /compact. */
+  trigger: string
+  preTokens: number
+  postTokens: number
+}
+
 export interface ParseStats {
   files: number
   sessions: number
@@ -41,4 +52,6 @@ export interface ParseStats {
 export interface ParseResult {
   events: UsageEvent[]
   stats: ParseStats
+  /** Compaction events, when the agent records them (Claude Code only). */
+  compactions?: Compaction[]
 }

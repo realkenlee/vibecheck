@@ -139,6 +139,9 @@ function main() {
   let events: UsageEvent[] = [...claude.events, ...codex.events]
   if (args.days) events = filterDays(events, args.days)
   if (args.month) events = filterMonth(events, args.month)
+  let compactions = claude.compactions ?? []
+  if (args.days) compactions = filterDays(compactions, args.days)
+  if (args.month) compactions = filterMonth(compactions, args.month)
 
   if (args.command === 'export') {
     const report = teamReport(events, {
@@ -277,7 +280,7 @@ function main() {
           byDay: byDay(events),
           tools: toolUsage(events),
           hourly: hourlyHistogram(events),
-          insights: diagnose(events),
+          insights: diagnose(events, compactions),
           budget: args.budget ? budgetStatus(events, args.budget) : null,
           parseStats: { claude: claude.stats, codex: codex.stats },
         },
@@ -450,7 +453,7 @@ function main() {
   }
 
   // ── doctor's notes ──
-  const notes = diagnose(events)
+  const notes = diagnose(events, compactions)
   if (notes.length) {
     console.log(bold("  Doctor's notes"))
     for (const n of notes) {

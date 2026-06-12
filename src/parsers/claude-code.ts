@@ -13,10 +13,13 @@
 // - Tool RESULTS live on `user`-type lines: message.content[] items with
 //   type "tool_result", matched to their call by `tool_use_id`. `is_error`
 //   marks failures. Content is a string or an array of {text} blocks.
+// - Compactions are `system` lines with subtype "compact_boundary" and
+//   compactMetadata {trigger, preTokens, postTokens} — exact receipts for
+//   how much context each compaction shed.
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, basename } from 'node:path'
-import type { ParseResult, UsageEvent } from '../schema.js'
+import type { Compaction, ParseResult, UsageEvent } from '../schema.js'
 
 interface ClaudeUsage {
   input_tokens?: number
@@ -41,6 +44,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
   const byId = new Map<string, UsageEvent>()
   // tool_use id -> event, so results (which arrive on later `user` lines) attribute back
   const byToolUse = new Map<string, UsageEvent>()
+  const compactions: Compaction[] = []
   let skippedLines = 0
   let anonCounter = 0
 
@@ -51,6 +55,21 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       d = JSON.parse(line)
     } catch {
       skippedLines++
+      continue
+    }
+    if (d.type === 'system' && d.subtype === 'compact_boundary') {
+      const m = d.compactMetadata as
+        | { trigger?: string; preTokens?: number; postTokens?: number }
+        | undefined
+      if (m) {
+        compactions.push({
+          sessionId,
+          timestamp: typeof d.timestamp === 'string' ? d.timestamp : '',
+          trigger: typeof m.trigger === 'string' ? m.trigger : 'unknown',
+          preTokens: m.preTokens ?? 0,
+          postTokens: m.postTokens ?? 0,
+        })
+      }
       continue
     }
     if (d.type === 'user') {
@@ -115,12 +134,14 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
   return {
     events,
     stats: { files: 1, sessions: 1, events: events.length, skippedLines },
+    compactions,
   }
 }
 
 /** Recursively parse every *.jsonl under a Claude Code projects root. */
 export function parseClaudeDir(root: string): ParseResult {
   const events: UsageEvent[] = []
+  const compactions: Compaction[] = []
   let files = 0
   let skippedLines = 0
   const sessions = new Set<string>()
@@ -131,9 +152,14 @@ export function parseClaudeDir(root: string): ParseResult {
     sessions.add(sessionId)
     const r = parseClaudeLines(readFileSync(path, 'utf8').split('\n'), sessionId)
     events.push(...r.events)
+    compactions.push(...(r.compactions ?? []))
     skippedLines += r.stats.skippedLines
   }
-  return { events, stats: { files, sessions: sessions.size, events: events.length, skippedLines } }
+  return {
+    events,
+    stats: { files, sessions: sessions.size, events: events.length, skippedLines },
+    compactions,
+  }
 }
 
 export function* walkJsonl(root: string): Generator<string> {

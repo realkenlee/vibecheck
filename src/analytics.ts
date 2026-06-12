@@ -115,11 +115,11 @@ export function hourlyHistogram(events: UsageEvent[]): number[] {
 }
 
 /** Keep only events whose local day falls in the given 'YYYY-MM' month. */
-export function filterMonth(events: UsageEvent[], month: string): UsageEvent[] {
+export function filterMonth<T extends { timestamp: string }>(events: T[], month: string): T[] {
   return events.filter((e) => localDay(e.timestamp).startsWith(month + '-'))
 }
 
-export function filterDays(events: UsageEvent[], days: number, now = new Date()): UsageEvent[] {
+export function filterDays<T extends { timestamp: string }>(events: T[], days: number, now = new Date()): T[] {
   const cutoff = now.getTime() - days * 86_400_000
   return events.filter((e) => {
     const t = new Date(e.timestamp).getTime()

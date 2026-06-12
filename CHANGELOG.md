@@ -5,6 +5,8 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- Claude Code parser now extracts **compaction receipts** (`compact_boundary` records → `Compaction` on `ParseResult`: trigger, preTokens, postTokens)
+- Doctor's note for **compaction receipts** — when ≥80% of compactions are auto-forced at the context ceiling, reports exactly how many tokens each one shed and suggests compacting between tasks instead
 - Claude Code parser now captures **tool-result sizes and errors** (`toolResultBytes`, `toolErrors` on `UsageEvent`) — results live on `user` lines, matched by `tool_use_id`
 - Doctor's note for **failure tax** — flags when >8% of tool-using turns return errors (each failure usually costs a retry turn)
 - Doctor's note for **tool-result diet** — warns past ~8KB/turn (results are re-read every later turn), praises lean output under 3KB

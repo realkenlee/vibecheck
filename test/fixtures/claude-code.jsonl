@@ -6,5 +6,6 @@
 {"type":"user","cwd":"/Users/dev/acme-app","sessionId":"s1","timestamp":"2026-06-01T11:30:05.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t2","content":[{"type":"text","text":"aaaa"},{"type":"text","text":"bbbbbb"}]},{"type":"tool_result","tool_use_id":"t3","is_error":true,"content":"command not found"},{"type":"tool_result","tool_use_id":"t999","content":"orphan result, no matching call"}]}}
 {"type":"assistant","cwd":"/Users/dev/side-project","sessionId":"s1","timestamp":"2026-06-01T12:00:00.000Z","isSidechain":true,"requestId":"req_3","message":{"id":"msg_3","model":"claude-haiku-4-5-20251001","role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}
 {"type":"assistant","cwd":"/Users/dev/acme-app","sessionId":"s1","timestamp":"2026-06-01T12:05:00.000Z","message":{"id":"msg_err","model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"API error"}],"usage":{"input_tokens":0,"output_tokens":0}}}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-06-01T11:45:00.000Z","compactMetadata":{"trigger":"auto","preTokens":160000,"postTokens":12000,"durationMs":4100}}
 {"type":"system","timestamp":"2026-06-01T12:06:00.000Z"}
 not valid json at all

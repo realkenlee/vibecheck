@@ -1,7 +1,7 @@
 // Doctor's notes — turn the numbers into a diagnosis. Every heuristic is
 // deterministic, threshold-gated, and only fires with enough data to matter.
 
-import type { UsageEvent } from './schema.js'
+import type { Compaction, UsageEvent } from './schema.js'
 import { eventCost, rateFor } from './pricing.js'
 import { totals, bySession, hourlyHistogram } from './analytics.js'
 import { classifyEvent, type Activity } from './activities.js'
@@ -20,7 +20,7 @@ const usd = (x: number) => `$${x >= 100 ? Math.round(x) : x.toFixed(2)}`
 const MIN_EVENTS = 50
 const MIN_COST = 1
 
-export function diagnose(events: UsageEvent[]): Insight[] {
+export function diagnose(events: UsageEvent[], compactions: Compaction[] = []): Insight[] {
   const t = totals(events)
   if (t.events < MIN_EVENTS || t.cost < MIN_COST) return []
 
@@ -211,6 +211,22 @@ export function diagnose(events: UsageEvent[]): Insight[] {
         text: `Responses are getting longer: avg output/turn went from ~${Math.round(prevAvg)} to ~${Math.round(currAvg)} tokens (${prevKey} → ${currKey}, +${Math.floor((currAvg / prevAvg - 1) * 100)}%). Output costs 5× input — ask for tighter diffs and less narration.`,
       })
     }
+  }
+
+  // 11. Compaction receipts — compact_boundary records say exactly how many
+  // tokens each compaction shed. trigger="auto" means it was forced at the
+  // context ceiling instead of chosen between tasks.
+  const autoC = compactions.filter((c) => c.trigger === 'auto')
+  if (autoC.length >= 3 && autoC.length / compactions.length >= 0.8) {
+    const shed = autoC.reduce((a, c) => a + Math.max(0, c.preTokens - c.postTokens), 0)
+    const label =
+      autoC.length === compactions.length
+        ? `All ${autoC.length}`
+        : `${autoC.length} of ${compactions.length}`
+    out.push({
+      level: 'info',
+      text: `${label} compactions were auto-forced at the context ceiling — each shed ~${Math.round(shed / autoC.length / 1000)}k tokens you'd been re-paying every turn. A /compact between tasks captures that earlier, on your terms.`,
+    })
   }
 
   return out.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])

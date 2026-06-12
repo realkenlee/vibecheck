@@ -70,6 +70,15 @@ describe('claude-code parser', () => {
     expect(r.events.find((e) => e.inputTokens === 100)!.toolErrors).toBe(0)
   })
 
+  it('extracts compact_boundary records with their token receipts', () => {
+    expect(r.compactions).toHaveLength(1)
+    const c = r.compactions![0]
+    expect(c.trigger).toBe('auto')
+    expect(c.preTokens).toBe(160_000)
+    expect(c.postTokens).toBe(12_000)
+    expect(c.sessionId).toBe('fixture-session')
+  })
+
   it('extracts gitBranch when present, null otherwise', () => {
     expect(r.events.find((e) => e.inputTokens === 100)!.gitBranch).toBe('main')
     expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.gitBranch).toBe('feat/q2-migration')
