@@ -2,6 +2,11 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- [`docs/report-schema.md`](docs/report-schema.md) — the `vibecheck.report.v1` consumer contract: every field, its type and semantics, the additive-only versioning policy, and the misreadings consumers actually make (API-equivalent ≠ a bill; team agentHours can exceed wall-clock). A parity test asserts the doc and a maximal generated report agree on the field list
+
 ## [0.15.0] — 2026-06-12
 
 ### Added

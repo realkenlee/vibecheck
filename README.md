@@ -132,7 +132,7 @@ vibecheck export --anonymous                   # …without your git name/email
 vibecheck export --include-projects            # opt-in: project + branch names
 ```
 
-By default the export contains **no prompts, no code, no file paths, no session ids, no project or branch names** — read [`src/export.ts`](src/export.ts), it's one screen of code. Doctor's notes travel as **stable ids + levels only** (never the rendered text); the id vocabulary is documented in [`docs/doctor-notes.md`](docs/doctor-notes.md).
+By default the export contains **no prompts, no code, no file paths, no session ids, no project or branch names** — read [`src/export.ts`](src/export.ts), it's one screen of code. The full schema is documented in [`docs/report-schema.md`](docs/report-schema.md) (additive-only within v1; a test keeps doc and code in sync). Doctor's notes travel as **stable ids + levels only** (never the rendered text); the id vocabulary is documented in [`docs/doctor-notes.md`](docs/doctor-notes.md).
 
 **vibecheck for Teams** (hosted rollups, org-wide burn-down, activity benchmarks, gateway-level capture) is in design. Interested? → khflee@gmail.com
 
@@ -160,7 +160,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 111 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 112 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 

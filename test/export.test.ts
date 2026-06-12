@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { teamReport } from '../src/export.js'
 import { byBranch } from '../src/analytics.js'
 import type { UsageEvent } from '../src/schema.js'
@@ -79,6 +82,22 @@ describe('teamReport (the enterprise seam)', () => {
   it('anonymous strips git identity', () => {
     const r = teamReport(events, { anonymous: true })
     expect(r.user).toEqual({ name: null, email: null })
+  })
+
+  it('documents every field in docs/report-schema.md (the consumer contract)', () => {
+    const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
+    const doc = readFileSync(join(root, 'docs', 'report-schema.md'), 'utf8')
+    const section = doc.split('## Top-level fields')[1].split('\n## ')[0]
+    const docFields = [...section.matchAll(/^\| `([a-zA-Z]+)` \|/gm)].map((m) => m[1])
+    // a maximal report: every optional field present
+    const full = teamReport(events, {
+      budget: 100,
+      includeProjects: true,
+      turnDurations: [{ sessionId: 's1', timestamp: '2026-06-05T10:00:00.000Z', ms: 3_600_000 }],
+      now: new Date('2026-06-10T12:00:00'),
+    })
+    expect([...docFields].sort()).toEqual(Object.keys(full).sort())
+    expect(docFields.length).toBeGreaterThanOrEqual(14)
   })
 
   it('carries insight ids+levels but NEVER the rendered note text', () => {
