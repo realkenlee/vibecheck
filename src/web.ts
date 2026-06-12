@@ -60,7 +60,15 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
   const hours = hourlyHistogram(events)
   const maxHour = Math.max(...hours, 1)
   const notes = diagnose(events, opts.compactions ?? [], opts.fileReads ?? [])
-  const sessions = bySession(events).slice(0, 15)
+  // per-session compaction counts (Claude Code only — codex doesn't log them)
+  const compactCount = new Map<string, number>()
+  for (const c of opts.compactions ?? []) compactCount.set(c.sessionId, (compactCount.get(c.sessionId) ?? 0) + 1)
+  const sessions = bySession(events)
+    .slice(0, 15)
+    .map((s) => ({
+      ...s,
+      compactions: s.agent === 'claude-code' ? (compactCount.get(s.sessionId) ?? 0) : 0,
+    }))
   const months = byMonth(events).filter((m) => m.key !== 'unknown')
   const branches = byBranch(events).filter((b) => b.key !== '(unknown)')
   const budget = opts.budget ? budgetStatus(events, opts.budget, opts.now) : null
@@ -131,13 +139,13 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
 
   const sessionsHtml = sessions.length
     ? `<section><h2>Top sessions</h2><table>
-<thead><tr><th>date</th><th>project</th><th>agent</th><th class="num">span</th><th class="num">turns</th><th class="num">cost</th></tr></thead>
+<thead><tr><th>date</th><th>project</th><th>agent</th><th class="num">span</th><th class="num">turns</th><th class="num" title="pauses >5min — each expires the prompt cache">gaps</th><th class="num" title="context compactions">compact</th><th class="num">cost</th></tr></thead>
 <tbody>${sessions
         .map(
           (s) =>
             `<tr><td class="dim">${esc(s.start.slice(0, 10))}</td><td>${esc(s.project)}</td><td>${esc(
               s.agent,
-            )}</td><td class="num">${s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`}</td><td class="num">${s.turns}</td><td class="num">${money(s.cost)}</td></tr>`,
+            )}</td><td class="num">${s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`}</td><td class="num">${s.turns}</td><td class="num">${s.gaps || '—'}</td><td class="num">${s.compactions || '—'}</td><td class="num">${money(s.cost)}</td></tr>`,
         )
         .join('\n')}</tbody></table></section>`
     : ''

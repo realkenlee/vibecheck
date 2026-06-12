@@ -6,6 +6,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ### Added
 - `vibecheck sessions` now shows per-session **gaps** (>5min pauses — each expires the prompt cache) and **compact** (context compactions) columns, so the drill-down substantiates the doctor's notes; `SessionSummary` gains `gaps`, the JSON output gains `compactions`
+- The `web` dashboard's Top sessions table gets the same gaps/compact columns (with hover explanations)
 
 ## [0.7.0] — 2026-06-12
 

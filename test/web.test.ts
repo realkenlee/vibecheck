@@ -68,6 +68,23 @@ describe('web dashboard', () => {
     expect(dashboardHtml(many, {})).not.toContain('auto-forced')
   })
 
+  it('shows per-session gaps and compactions in Top sessions', () => {
+    // two events 6min apart -> 1 gap in s1; one compaction attributed to s1
+    const gapEvents = [
+      ev({}),
+      ev({ timestamp: '2026-06-05T10:06:00.000Z' }),
+      ev({ sessionId: 's2', timestamp: '2026-06-06T11:00:00.000Z' }),
+    ]
+    const withC = dashboardHtml(gapEvents, {
+      compactions: [
+        { sessionId: 's1', timestamp: '2026-06-05T10:03:00.000Z', trigger: 'auto', preTokens: 1, postTokens: 1 },
+      ],
+    })
+    expect(withC).toContain('>gaps<')
+    expect(withC).toContain('>compact<')
+    expect(withC).toMatch(/<td class="num">1<\/td><td class="num">1<\/td>/) // s1 row: 1 gap, 1 compaction
+  })
+
   it("threads file reads into the doctor's notes", () => {
     const many = Array.from({ length: 60 }, (_, i) => ev({ sessionId: `s${i % 7}` }))
     const reads = Array.from({ length: 60 }, () => ({
