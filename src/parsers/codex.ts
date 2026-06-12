@@ -10,6 +10,10 @@
 //   cached_input_tokens is a SUBSET of input_tokens.
 // - response_item/function_call + custom_tool_call: tool names; attributed to
 //   the next token_count event.
+// - response_item/function_call_output + custom_tool_call_output: payload.output
+//   is a STRING. Some tools JSON-encode it as {"output", "metadata":{"exit_code"}}
+//   — that's the only honest error signal (plain-string outputs carry none, so
+//   we never guess errors from text). Attributed to the next token_count too.
 
 import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
@@ -28,6 +32,8 @@ export function parseCodexLines(lines: Iterable<string>, sessionId: string): Par
   let model = 'unknown'
   let cwd = ''
   let pendingTools: string[] = []
+  let pendingResultBytes = 0
+  let pendingErrors = 0
 
   for (const line of lines) {
     if (!line.trim()) continue
@@ -53,6 +59,22 @@ export function parseCodexLines(lines: Iterable<string>, sessionId: string): Par
       if (typeof p.name === 'string') pendingTools.push(p.name)
       continue
     }
+    if (
+      d.type === 'response_item' &&
+      (p.type === 'function_call_output' || p.type === 'custom_tool_call_output')
+    ) {
+      if (typeof p.output === 'string') {
+        pendingResultBytes += p.output.length
+        try {
+          const parsed = JSON.parse(p.output) as { metadata?: { exit_code?: number } } | null
+          const ec = parsed?.metadata?.exit_code
+          if (typeof ec === 'number' && ec !== 0) pendingErrors++
+        } catch {
+          // plain-string output — no structured error signal, never guess
+        }
+      }
+      continue
+    }
     if (d.type === 'event_msg' && p.type === 'token_count') {
       const info = p.info as { last_token_usage?: TokenUsage } | null | undefined
       const u = info?.last_token_usage
@@ -69,10 +91,14 @@ export function parseCodexLines(lines: Iterable<string>, sessionId: string): Par
         cacheReadTokens: cached,
         cacheWriteTokens: 0,
         toolCalls: pendingTools,
+        toolResultBytes: pendingResultBytes,
+        toolErrors: pendingErrors,
         sidechain: false,
         gitBranch: null, // codex logs don't record the branch
       })
       pendingTools = []
+      pendingResultBytes = 0
+      pendingErrors = 0
     }
   }
 

@@ -7,6 +7,8 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ### Added
 - Claude Code parser now records **Read-tool invocations** (`FileRead` on `ParseResult`: session, timestamp, file **basename only**, result bytes) — full paths never leave the parser, and these feed local surfaces only (`export`/`wrapped` never see them)
 - Doctor's note for **re-read tax** — when the same file keeps getting re-read inside one session (≥50 repeats and ≥200KB), reports the repeat count, bytes re-entering context, and the hottest file
+- The skill spec now includes the re-read tax note (validated to exact CLI parity)
+- Codex parser now captures **tool-output sizes and errors** (`function_call_output` / `custom_tool_call_output` → `toolResultBytes`; errors only from explicit `metadata.exit_code ≠ 0` — plain-string outputs carry no signal and the doctor never guesses) — the result-diet and failure-tax notes now see both agents
 
 ## [0.6.0] — 2026-06-11
 

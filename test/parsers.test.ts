@@ -138,4 +138,17 @@ describe('codex parser', () => {
   it('counts unparseable lines', () => {
     expect(r.stats.skippedLines).toBe(1)
   })
+
+  it('attributes output sizes to the next token_count', () => {
+    // f1's JSON-encoded output + f2's plain string, both before event 0
+    const f1 = '{"output":"build failed","metadata":{"exit_code":1,"duration_seconds":0.4}}'
+    expect(r.events[0].toolResultBytes).toBe(f1.length + 'patch applied'.length)
+    expect(r.events[1].toolResultBytes).toBe(0)
+  })
+
+  it('counts errors only from explicit exit codes, never by guessing at text', () => {
+    // f1 carries exit_code 1 -> error; f2 is a plain string -> no signal, no guess
+    expect(r.events[0].toolErrors).toBe(1)
+    expect(r.events[1].toolErrors).toBe(0)
+  })
 })
