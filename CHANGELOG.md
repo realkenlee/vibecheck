@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.15.0] — 2026-06-12
 
 ### Added
 - **Cost per agent-hour** — the rate your runtime implies, on the wrapped card, wrapped summary, and report vitals ("24h agent runtime (≈$12/h)"). The rate's cost basis is Claude Code only, matching the runtime basis — a big Codex bill can't inflate it. Appears only alongside the runtime stat, never alone
