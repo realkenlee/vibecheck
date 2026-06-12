@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.14.0] — 2026-06-12
 
 ### Added
 - Agent runtime now shows on every surface that summarizes spend: the `report` vitals strip and the `web` dashboard gain an "agent runtime" stat (1h-gated, scoped by active filters like everything else). The README sample card shows the wrapped line
