@@ -30,6 +30,7 @@ Getting these wrong silently inflates the numbers. Each was verified against rea
 - `isSidechain: true` marks subagent traffic. `cwd` basename = project. Top-level `gitBranch` = branch. `timestamp` ISO.
 - **Session identity = the .jsonl filename**, not the embedded `sessionId` field (which can differ within one file after resumes). One file = one session.
 - Tool calls: `message.content[]` items with `type === "tool_use"` → `.name`.
+- Agent runtime: `type === "system"` lines with `subtype === "turn_duration"` carry `durationMs` — sum them (skip non-positive). Summed durations are **runtime, not wall-clock**: parallel subagents each log their own turns, so totals can exceed elapsed time. Say so when reporting.
 
 ### Codex (`~/.codex/sessions/**/*.jsonl`)
 
@@ -58,7 +59,7 @@ Unknown models: count tokens, exclude from cost, and SAY SO. Never silently misp
 
 ## Report
 
-Show: total API-equivalent spend (label it exactly that — subscription users don't pay this, it's value consumed), total tokens, sessions, cache savings (cache reads × (input − cacheRead rates)); then cost by model, by project, by month. If the user gives a monthly budget: spent / budget, % used, linear month-end projection.
+Show: total API-equivalent spend (label it exactly that — subscription users don't pay this, it's value consumed), total tokens, sessions, agent runtime in hours (only when ≥1h of `turn_duration` records exist — Claude Code logs them, Codex doesn't; omit rather than print 0h), cache savings (cache reads × (input − cacheRead rates)); then cost by model, by project, by month. If the user gives a monthly budget: spent / budget, % used, linear month-end projection.
 
 Honesty rules: round percentages DOWN; disclose file count parsed and any unparseable lines; never present an estimate as a bill.
 

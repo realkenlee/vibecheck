@@ -6,6 +6,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ### Added
 - Agent runtime now shows on every surface that summarizes spend: the `report` vitals strip and the `web` dashboard gain an "agent runtime" stat (1h-gated, scoped by active filters like everything else). The README sample card shows the wrapped line
+- `export` carries `agentHours` (additive to `vibecheck.report.v1`) — the team-level utilization number; only the aggregate crosses the wire, per-turn records never serialize. The zero-install skill spec documents the `turn_duration` parsing rule and the runtime-vs-wall-clock framing
 
 ## [0.13.0] — 2026-06-12
 

@@ -233,6 +233,7 @@ function main() {
       includeProjects: args.includeProjects,
       compactions,
       fileReads,
+      turnDurations,
     })
     const json = JSON.stringify(report, null, 2)
     if (args.out) {

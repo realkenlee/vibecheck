@@ -67,6 +67,15 @@ describe('teamReport (the enterprise seam)', () => {
     expect(r.byBranch![0].key).toBe('feat/secret-feature')
   })
 
+  it('sums turn durations into agentHours — the number crosses, the records never do', () => {
+    const td = { sessionId: 'secret-session-id', timestamp: '2026-06-05T10:00:00.000Z', ms: 5_400_000 }
+    const r = teamReport(events, { turnDurations: [td], now: new Date('2026-06-10T12:00:00') })
+    expect(r.agentHours).toBeCloseTo(1.5)
+    expect(JSON.stringify(r)).not.toContain('secret-session-id')
+    // no records (codex) -> null, not 0: "we don't know" beats a fake zero
+    expect(teamReport(events, { now: new Date('2026-06-10T12:00:00') }).agentHours).toBeNull()
+  })
+
   it('anonymous strips git identity', () => {
     const r = teamReport(events, { anonymous: true })
     expect(r.user).toEqual({ name: null, email: null })
