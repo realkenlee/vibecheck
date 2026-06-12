@@ -20,6 +20,10 @@ export interface UsageEvent {
   cacheWriteTokens: number
   /** Tool names invoked in this response. */
   toolCalls: string[]
+  /** Bytes of tool results returned for this turn's calls (Claude Code only; optional — older parsers omit it). */
+  toolResultBytes?: number
+  /** Tool calls in this turn that returned is_error (Claude Code only). */
+  toolErrors?: number
   /** True for subagent (sidechain) traffic. */
   sidechain: boolean
   /** Git branch the session ran on (Claude Code records it; null when unknown). */

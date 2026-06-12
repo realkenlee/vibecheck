@@ -93,6 +93,17 @@ export function diagnose(events: UsageEvent[]): Insight[] {
     })
   }
 
+  // 5. Night-owl vitals.
+  const hours = hourlyHistogram(events)
+  const night = hours.slice(0, 5).reduce((a, b) => a + b, 0)
+  const all = hours.reduce((a, b) => a + b, 0)
+  if (all > 0 && night / all > 0.15) {
+    out.push({
+      level: 'info',
+      text: `${pct(night / all)} of your turns happen between midnight and 5am. The doctor recommends sleep.`,
+    })
+  }
+
   // 6. Context tax — a session re-pays its whole history every turn, so late
   // turns in marathon sessions cost multiples of early ones. Estimate the
   // excess cache reads past turn 100 vs each session's own early baseline.
@@ -142,15 +153,64 @@ export function diagnose(events: UsageEvent[]): Insight[] {
     })
   }
 
-  // 5. Night-owl vitals.
-  const hours = hourlyHistogram(events)
-  const night = hours.slice(0, 5).reduce((a, b) => a + b, 0)
-  const all = hours.reduce((a, b) => a + b, 0)
-  if (all > 0 && night / all > 0.15) {
+  // 8. Failure tax — errored tool calls usually buy a retry turn on top of
+  // the failed one. Rate is over tool-using turns, not all turns.
+  const toolTurns = events.filter((e) => e.toolCalls.length > 0)
+  const errTurns = toolTurns.filter((e) => (e.toolErrors ?? 0) > 0)
+  if (toolTurns.length >= 100 && errTurns.length >= 20 && errTurns.length / toolTurns.length > 0.08) {
     out.push({
       level: 'info',
-      text: `${pct(night / all)} of your turns happen between midnight and 5am. The doctor recommends sleep.`,
+      text: `${pct(errTurns.length / toolTurns.length)} of tool-using turns had a failing call (${errTurns.length} of ${toolTurns.length}). Each failure usually costs a retry turn — and the error output rides in context for the rest of the session.`,
     })
+  }
+
+  // 9. Tool-result diet — results enter context and are re-paid as cache
+  // reads on every later turn, so fat results compound.
+  let resBytes = 0
+  let resTurns = 0
+  for (const e of toolTurns) {
+    if (e.toolResultBytes === undefined) continue
+    resTurns++
+    resBytes += e.toolResultBytes
+  }
+  if (resTurns >= 100) {
+    const avgKB = resBytes / resTurns / 1000
+    if (avgKB > 8) {
+      out.push({
+        level: 'warn',
+        text: `Fat tool results: ~${avgKB.toFixed(1)}KB per tool turn on average. Every byte is re-read each later turn — pipe commands through tail/grep and use Read limits.`,
+      })
+    } else if (avgKB < 3) {
+      out.push({
+        level: 'good',
+        text: `Lean tool results: ~${avgKB.toFixed(1)}KB per tool turn on average. Trimmed output keeps context rent low.`,
+      })
+    }
+  }
+
+  // 10. Verbosity drift — output tokens are the priciest line item (5× input).
+  // Compare the last two months that have enough turns to mean something.
+  const monthOut = new Map<string, { out: number; n: number }>()
+  for (const e of events) {
+    const m = e.timestamp.slice(0, 7)
+    if (m.length !== 7) continue
+    const v = monthOut.get(m) ?? { out: 0, n: 0 }
+    v.out += e.outputTokens
+    v.n++
+    monthOut.set(m, v)
+  }
+  const solidMonths = [...monthOut.entries()].filter(([, v]) => v.n >= 200).sort()
+  if (solidMonths.length >= 2) {
+    const [prevKey, prev] = solidMonths[solidMonths.length - 2]
+    const [currKey, curr] = solidMonths[solidMonths.length - 1]
+    const prevAvg = prev.out / prev.n
+    const currAvg = curr.out / curr.n
+    if (currAvg > prevAvg * 1.3) {
+      out.push({
+        level: 'info',
+        text: `Responses are getting longer: avg output/turn went from ~${Math.round(prevAvg)} to ~${Math.round(currAvg)} tokens (${prevKey} → ${currKey}, +${Math.floor((currAvg / prevAvg - 1) * 100)}%). Output costs 5× input — ask for tighter diffs and less narration.`,
+      })
+    }
   }
 
   return out.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])

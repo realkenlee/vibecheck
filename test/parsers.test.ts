@@ -55,6 +55,21 @@ describe('claude-code parser', () => {
     expect(multi.toolCalls).toEqual(['Read', 'Bash'])
   })
 
+  it('attributes tool result bytes back to the calling turn', () => {
+    // t1's tool_use only appears on the streamed DUPLICATE line — attribution
+    // must work through the dedupe path
+    const dup = r.events.find((e) => e.inputTokens === 100)!
+    expect(dup.toolResultBytes).toBe('build ok'.length)
+    // string content + text-block arrays are both summed; orphan results ignored
+    const multi = r.events.find((e) => e.model === 'claude-opus-4-8')!
+    expect(multi.toolResultBytes).toBe('aaaa'.length + 'bbbbbb'.length + 'command not found'.length)
+  })
+
+  it('counts errored tool results per turn', () => {
+    expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.toolErrors).toBe(1)
+    expect(r.events.find((e) => e.inputTokens === 100)!.toolErrors).toBe(0)
+  })
+
   it('extracts gitBranch when present, null otherwise', () => {
     expect(r.events.find((e) => e.inputTokens === 100)!.gitBranch).toBe('main')
     expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.gitBranch).toBe('feat/q2-migration')

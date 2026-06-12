@@ -106,6 +106,38 @@ describe("doctor's notes", () => {
     expect(gaps?.level).toBe('info')
   })
 
+  it('flags a high tool-failure rate', () => {
+    const notes = diagnose([
+      ...fill(100, { toolCalls: ['Bash'], toolResultBytes: 500, toolErrors: 0 }),
+      ...fill(20, { toolCalls: ['Bash'], toolResultBytes: 500, toolErrors: 1 }),
+    ])
+    const tax = notes.find((n) => n.text.includes('failing call'))
+    expect(tax?.level).toBe('info')
+    expect(tax?.text).toContain('20 of 120')
+  })
+
+  it('warns on fat tool results, praises lean ones', () => {
+    const fat = diagnose(fill(120, { toolCalls: ['Bash'], toolResultBytes: 20_000 }))
+    expect(fat.find((n) => n.text.includes('Fat tool results'))?.level).toBe('warn')
+    const lean = diagnose(fill(120, { toolCalls: ['Bash'], toolResultBytes: 500 }))
+    expect(lean.find((n) => n.text.includes('Lean tool results'))?.level).toBe('good')
+  })
+
+  it('stays quiet on result diet when sizes were never captured', () => {
+    const notes = diagnose(fill(120, { toolCalls: ['Bash'] })) // toolResultBytes undefined
+    expect(notes.some((n) => n.text.includes('tool results'))).toBe(false)
+  })
+
+  it('flags verbosity drift month over month', () => {
+    const notes = diagnose([
+      ...fill(200, { timestamp: '2026-05-05T10:00:00.000Z', outputTokens: 100_000 }),
+      ...fill(200, { timestamp: '2026-06-05T10:00:00.000Z', outputTokens: 220_000 }),
+    ])
+    const drift = notes.find((n) => n.text.includes('Responses are getting longer'))
+    expect(drift?.level).toBe('info')
+    expect(drift?.text).toContain('2026-05 → 2026-06')
+  })
+
   it('calls out night-owl usage and sorts warns first', () => {
     // build night timestamps via local-time Date so the test is TZ-independent
     const d = new Date(2026, 5, 5, 2, 0, 0)

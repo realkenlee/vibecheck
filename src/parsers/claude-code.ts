@@ -10,6 +10,9 @@
 // - `isSidechain: true` marks subagent traffic.
 // - `cwd` is the project working directory; `message.model` the model id.
 // - Synthetic/error records use model "<synthetic>" — no real usage, skip.
+// - Tool RESULTS live on `user`-type lines: message.content[] items with
+//   type "tool_result", matched to their call by `tool_use_id`. `is_error`
+//   marks failures. Content is a string or an array of {text} blocks.
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, basename } from 'node:path'
@@ -22,9 +25,22 @@ interface ClaudeUsage {
   cache_creation_input_tokens?: number
 }
 
+// tool_result content is a string or an array of text blocks
+function resultLength(content: unknown): number {
+  if (typeof content === 'string') return content.length
+  if (Array.isArray(content))
+    return content.reduce(
+      (a, c) => a + (typeof (c as { text?: unknown }).text === 'string' ? ((c as { text: string }).text.length) : 0),
+      0,
+    )
+  return 0
+}
+
 export function parseClaudeLines(lines: Iterable<string>, sessionId: string): ParseResult {
   // message.id -> event (later lines for the same id are more complete; usage is identical)
   const byId = new Map<string, UsageEvent>()
+  // tool_use id -> event, so results (which arrive on later `user` lines) attribute back
+  const byToolUse = new Map<string, UsageEvent>()
   let skippedLines = 0
   let anonCounter = 0
 
@@ -37,6 +53,20 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       skippedLines++
       continue
     }
+    if (d.type === 'user') {
+      // tool results — attribute size + errors back to the calling turn
+      const content = (d.message as { content?: unknown } | undefined)?.content
+      if (Array.isArray(content)) {
+        for (const c of content as { type?: string; tool_use_id?: string; content?: unknown; is_error?: boolean }[]) {
+          if (c.type !== 'tool_result' || !c.tool_use_id) continue
+          const ev = byToolUse.get(c.tool_use_id)
+          if (!ev) continue
+          ev.toolResultBytes = (ev.toolResultBytes ?? 0) + resultLength(c.content)
+          if (c.is_error) ev.toolErrors = (ev.toolErrors ?? 0) + 1
+        }
+      }
+      continue
+    }
     if (d.type !== 'assistant') continue
     const msg = d.message as
       | { id?: string; model?: string; usage?: ClaudeUsage; content?: unknown }
@@ -46,17 +76,19 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
     if (model === '<synthetic>') continue
 
     const u = msg.usage
-    const toolCalls = Array.isArray(msg.content)
-      ? (msg.content as { type?: string; name?: string }[])
-          .filter((c) => c.type === 'tool_use' && c.name)
-          .map((c) => c.name as string)
+    const toolUses = Array.isArray(msg.content)
+      ? (msg.content as { type?: string; name?: string; id?: string }[]).filter(
+          (c) => c.type === 'tool_use' && c.name,
+        )
       : []
+    const toolCalls = toolUses.map((c) => c.name as string)
 
     const id = msg.id ?? `anon-${anonCounter++}`
     const prev = byId.get(id)
     if (prev) {
       // streamed duplicate — union tool names, keep latest usage (identical in practice)
       for (const t of toolCalls) if (!prev.toolCalls.includes(t)) prev.toolCalls.push(t)
+      for (const c of toolUses) if (c.id) byToolUse.set(c.id, prev)
       continue
     }
     byId.set(id, {
@@ -70,9 +102,13 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       cacheReadTokens: u.cache_read_input_tokens ?? 0,
       cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
       toolCalls,
+      toolResultBytes: 0,
+      toolErrors: 0,
       sidechain: d.isSidechain === true,
       gitBranch: typeof d.gitBranch === 'string' && d.gitBranch ? d.gitBranch : null,
     })
+    const event = byId.get(id)!
+    for (const c of toolUses) if (c.id) byToolUse.set(c.id, event)
   }
 
   const events = [...byId.values()]

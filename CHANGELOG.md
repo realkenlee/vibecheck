@@ -5,6 +5,10 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- Claude Code parser now captures **tool-result sizes and errors** (`toolResultBytes`, `toolErrors` on `UsageEvent`) — results live on `user` lines, matched by `tool_use_id`
+- Doctor's note for **failure tax** — flags when >8% of tool-using turns return errors (each failure usually costs a retry turn)
+- Doctor's note for **tool-result diet** — warns past ~8KB/turn (results are re-read every later turn), praises lean output under 3KB
+- Doctor's note for **verbosity drift** — month-over-month rise in output tokens per turn (output is the 5×-priced line item)
 - Doctor's note for **context tax** — sessions past 100 turns re-pay their whole history as cache reads every turn; quantifies the excess vs each session's own early baseline ("context is rent, not a purchase")
 - Doctor's note for **idle gaps** — >5min pauses inside sessions expire the prompt cache; counts the gaps and prices the post-gap cache rebuilds
 - **Zero-install Claude Code skill** ([`skill/SKILL.md`](skill/SKILL.md)) — encodes the full parsing spec (message-id dedupe, cache-subset split, list prices) so Claude Code can compute the report with no install at all. Validated: an implementation written from the spec alone matches the CLI's output exactly.
