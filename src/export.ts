@@ -6,7 +6,8 @@
 // confidential codenames. An IC can read the entire payload before sharing it.
 
 import { execSync } from 'node:child_process'
-import type { UsageEvent } from './schema.js'
+import type { Compaction, FileRead, UsageEvent } from './schema.js'
+import { diagnose } from './insights.js'
 import {
   totals,
   byModel,
@@ -33,6 +34,9 @@ export interface TeamReport {
   byModel: Bucket[]
   byAgent: Bucket[]
   byDay: Bucket[]
+  /** Doctor's notes as id+level ONLY — never the rendered text, which can
+   *  contain file basenames (re-read tax) or project names (whale session). */
+  insights: { id: string; level: 'warn' | 'info' | 'good' }[]
   budget: BudgetStatus | null
   /** Only present with --include-projects (opt-in: names can be sensitive). */
   byProject?: Bucket[]
@@ -45,6 +49,9 @@ export interface ExportOptions {
   anonymous?: boolean
   includeProjects?: boolean
   now?: Date
+  /** Used only to compute insight ids — never serialized. */
+  compactions?: Compaction[]
+  fileReads?: FileRead[]
 }
 
 function gitIdentity(): { name: string | null; email: string | null } {
@@ -77,6 +84,10 @@ export function teamReport(events: UsageEvent[], opts: ExportOptions = {}): Team
     byModel: byModel(events),
     byAgent: byAgent(events),
     byDay: days,
+    insights: diagnose(events, opts.compactions ?? [], opts.fileReads ?? []).map((n) => ({
+      id: n.id,
+      level: n.level,
+    })),
     budget: opts.budget ? budgetStatus(events, opts.budget, opts.now) : null,
   }
   if (opts.includeProjects) {

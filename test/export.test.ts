@@ -71,4 +71,25 @@ describe('teamReport (the enterprise seam)', () => {
     const r = teamReport(events, { anonymous: true })
     expect(r.user).toEqual({ name: null, email: null })
   })
+
+  it('carries insight ids+levels but NEVER the rendered note text', () => {
+    // enough volume to clear the doctor's MIN_EVENTS/MIN_COST floor, plus
+    // file reads that trigger the re-read tax note (whose text names a file)
+    const many = Array.from({ length: 60 }, (_, i) =>
+      ev({ sessionId: 's1', outputTokens: 1_000_000, toolCalls: ['Read'], timestamp: `2026-06-05T10:${String(i % 60).padStart(2, '0')}:00.000Z` }),
+    )
+    const reads = Array.from({ length: 60 }, () => ({
+      sessionId: 's1',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      file: 'topsecret.py',
+      bytes: 5000,
+    }))
+    const r = teamReport(many, { fileReads: reads })
+    expect(r.insights.length).toBeGreaterThan(0)
+    expect(r.insights.map((n) => n.id)).toContain('re-read-tax')
+    for (const n of r.insights) expect(Object.keys(n).sort()).toEqual(['id', 'level'])
+    const json = JSON.stringify(r)
+    expect(json).not.toContain('topsecret') // file names stay local
+    expect(json).not.toContain('Re-read tax') // note text stays local
+  })
 })

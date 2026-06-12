@@ -171,6 +171,8 @@ function main() {
       budget: args.budget,
       anonymous: args.anonymous,
       includeProjects: args.includeProjects,
+      compactions,
+      fileReads,
     })
     const json = JSON.stringify(report, null, 2)
     if (args.out) {

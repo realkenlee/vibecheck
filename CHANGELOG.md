@@ -6,6 +6,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ### Added
 - **`vibecheck doctor --fail-on-warn`** — exit 1 when any ⚠ note fires, so teams can gate CI on session hygiene; rejected loudly outside `doctor`
+- Doctor's notes now carry **stable ids** (`cache-health`, `context-tax`, `re-read-tax`, …) and the team export includes `insights` as **id+level only** — never the rendered text, which can contain file basenames or project names. Teams can aggregate "how many devs have a context-tax warning" without seeing anyone's details
 - README shows a sample wrapped card ([docs/wrapped-sample.svg](docs/wrapped-sample.svg), synthetic data)
 
 ## [0.9.0] — 2026-06-12

@@ -7,6 +7,8 @@ import { totals, bySession, hourlyHistogram } from './analytics.js'
 import { classifyEvent, type Activity } from './activities.js'
 
 export interface Insight {
+  /** Stable slug — the team-aggregation key (`export` carries id+level, never text). */
+  id: string
   level: 'warn' | 'info' | 'good'
   text: string
 }
@@ -36,11 +38,13 @@ export function diagnose(
     const hitRate = t.cacheReadTokens / cacheable
     if (hitRate >= 0.8) {
       out.push({
+        id: 'cache-health',
         level: 'good',
         text: `Healthy cache: ${pct(hitRate)} of input was served from cache, saving ${usd(t.cacheSavings)} vs list price.`,
       })
     } else if (hitRate < 0.5) {
       out.push({
+        id: 'cache-health',
         level: 'warn',
         text: `Low cache hit rate (${pct(hitRate)}). Frequent session restarts or >5min idle gaps break the prompt cache — cached input costs 10% of fresh.`,
       })
@@ -56,6 +60,7 @@ export function diagnose(
   }
   if (writeCost > 1 && writeCost > t.cacheSavings) {
     out.push({
+      id: 'cache-thrash',
       level: 'warn',
       text: `Cache thrash: writing to cache cost ${usd(writeCost)} (1.25× input rate) but reads only saved ${usd(t.cacheSavings)}. Short sessions and >5min idle gaps pay the write premium without the payoff.`,
     })
@@ -66,6 +71,7 @@ export function diagnose(
   const exec = acts.get('executing') ?? 0
   if (exec > 0.4) {
     out.push({
+      id: 'executing-share',
       level: 'info',
       text: `${pct(exec)} of spend is command-running turns. Verbose build/test output is token-hungry — pipe through tail/grep, silence noisy commands.`,
     })
@@ -73,6 +79,7 @@ export function diagnose(
   const reasoning = acts.get('reasoning') ?? 0
   if (reasoning > 0.35) {
     out.push({
+      id: 'reasoning-share',
       level: 'info',
       text: `${pct(reasoning)} of spend is no-tool turns (discussion/reasoning). Fine if intentional — but long Q&A may belong in a cheaper chat surface.`,
     })
@@ -82,6 +89,7 @@ export function diagnose(
   const sideCost = events.reduce((a, e) => a + (e.sidechain ? (eventCost(e) ?? 0) : 0), 0)
   if (t.cost > 0 && sideCost / t.cost > 0.25) {
     out.push({
+      id: 'subagent-share',
       level: 'info',
       text: `Subagents account for ${pct(sideCost / t.cost)} of spend (${usd(sideCost)}). Each spawn re-derives context — batch related work into fewer agents.`,
     })
@@ -92,6 +100,7 @@ export function diagnose(
   if (sessions.length >= 5 && sessions[0].cost / t.cost > 0.3) {
     const s = sessions[0]
     out.push({
+      id: 'whale-session',
       level: 'info',
       text: `One session is ${pct(s.cost / t.cost)} of all spend (${usd(s.cost)}, ${s.project}). Run \`vibecheck sessions\` to see what it did.`,
     })
@@ -103,6 +112,7 @@ export function diagnose(
   const all = hours.reduce((a, b) => a + b, 0)
   if (all > 0 && night / all > 0.15) {
     out.push({
+      id: 'night-owl',
       level: 'info',
       text: `${pct(night / all)} of your turns happen between midnight and 5am. The doctor recommends sleep.`,
     })
@@ -131,6 +141,7 @@ export function diagnose(
   if (marathons > 0 && tax > 5) {
     const k = (x: number) => `${Math.round(x / 1000)}k`
     out.push({
+      id: 'context-tax',
       level: tax / t.cost > 0.2 ? 'warn' : 'info',
       text: `Context tax: ${marathons} session${marathons > 1 ? 's' : ''} ran past 100 turns — late turns re-read ~${k(lateSum / Math.max(1, lateN))} cached tokens apiece vs ~${k(earlySum / Math.max(1, earlyN))} early, ≈ ${usd(tax)} of pure re-reading. Context is rent, not a purchase: /compact or restart between tasks.`,
     })
@@ -152,6 +163,7 @@ export function diagnose(
   }
   if (gapCount >= 10 && gapCost > 2) {
     out.push({
+      id: 'idle-gaps',
       level: 'info',
       text: `${gapCount} idle gaps >5min inside sessions let the prompt cache expire — post-gap turns re-wrote it for ≈ ${usd(gapCost)}. Wrap up before stepping away, or expect a rebuild on return.`,
     })
@@ -163,6 +175,7 @@ export function diagnose(
   const errTurns = toolTurns.filter((e) => (e.toolErrors ?? 0) > 0)
   if (toolTurns.length >= 100 && errTurns.length >= 20 && errTurns.length / toolTurns.length > 0.08) {
     out.push({
+      id: 'failure-tax',
       level: 'info',
       text: `${pct(errTurns.length / toolTurns.length)} of tool-using turns had a failing call (${errTurns.length} of ${toolTurns.length}). Each failure usually costs a retry turn — and the error output rides in context for the rest of the session.`,
     })
@@ -181,11 +194,13 @@ export function diagnose(
     const avgKB = resBytes / resTurns / 1000
     if (avgKB > 8) {
       out.push({
+        id: 'result-diet',
         level: 'warn',
         text: `Fat tool results: ~${avgKB.toFixed(1)}KB per tool turn on average. Every byte is re-read each later turn — pipe commands through tail/grep and use Read limits.`,
       })
     } else if (avgKB < 3) {
       out.push({
+        id: 'result-diet',
         level: 'good',
         text: `Lean tool results: ~${avgKB.toFixed(1)}KB per tool turn on average. Trimmed output keeps context rent low.`,
       })
@@ -211,6 +226,7 @@ export function diagnose(
     const currAvg = curr.out / curr.n
     if (currAvg > prevAvg * 1.3) {
       out.push({
+        id: 'verbosity-drift',
         level: 'info',
         text: `Responses are getting longer: avg output/turn went from ~${Math.round(prevAvg)} to ~${Math.round(currAvg)} tokens (${prevKey} → ${currKey}, +${Math.floor((currAvg / prevAvg - 1) * 100)}%). Output costs 5× input — ask for tighter diffs and less narration.`,
       })
@@ -228,6 +244,7 @@ export function diagnose(
         ? `All ${autoC.length}`
         : `${autoC.length} of ${compactions.length}`
     out.push({
+      id: 'compaction-receipts',
       level: 'info',
       text: `${label} compactions were auto-forced at the context ceiling — each shed ~${Math.round(shed / autoC.length / 1000)}k tokens you'd been re-paying every turn. A /compact between tasks captures that earlier, on your terms.`,
     })
@@ -260,6 +277,7 @@ export function diagnose(
     const kb = Math.floor(repeatBytes / 1024)
     const size = kb >= 1024 ? `${(Math.floor(kb / 102.4) / 10).toFixed(1)}MB` : `${kb}KB`
     out.push({
+      id: 're-read-tax',
       level: kb >= 1024 || top.reads >= 25 ? 'warn' : 'info',
       text: `Re-read tax: ${repeats} repeat file reads inside sessions (~${size} re-entering context) — ${top.file} alone was read ${top.reads}× in one session. Repeats are re-paid as cache reads every later turn; line-range reads and smaller files keep the rent down.`,
     })

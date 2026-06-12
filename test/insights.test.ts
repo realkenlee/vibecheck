@@ -22,6 +22,13 @@ const fill = (n: number, over: Partial<UsageEvent> = {}) =>
   Array.from({ length: n }, (_, i) => ev({ sessionId: `s${i % 7}`, ...over }))
 
 describe("doctor's notes", () => {
+  it('every note carries a stable kebab-case id (the team-aggregation key)', () => {
+    const notes = diagnose(fill(60, { inputTokens: 100_000, cacheReadTokens: 10_000, toolCalls: ['Bash'] }))
+    expect(notes.length).toBeGreaterThan(0)
+    for (const n of notes) expect(n.id).toMatch(/^[a-z][a-z-]*[a-z]$/)
+    expect(notes.find((n) => n.text.includes('cache hit rate'))?.id).toBe('cache-health')
+  })
+
   it('stays silent on thin data', () => {
     expect(diagnose([ev({})])).toEqual([])
     expect(diagnose(fill(60, { outputTokens: 1 }))).toEqual([]) // events but no cost
