@@ -150,7 +150,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 91 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 94 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 
@@ -160,7 +160,7 @@ npm run dev     # build + run against your own sessions
 - [x] Budget burn-down with month-end projection
 - [x] Branch-level cost attribution
 - [x] Aggregates-only team export
-- [x] Session drill-down (`vibecheck sessions`)
+- [x] Session drill-down (`vibecheck sessions`, per-session detail via `sessions <id>`)
 - [x] Doctor's notes (actionable diagnosis: cache health, context tax, idle gaps, compaction receipts, re-read tax, failure tax, verbosity drift)
 - [x] "AI Coding Wrapped" shareable card (`vibecheck wrapped`, SVG, aggregates only)
 - [x] Local dashboard (`vibecheck web` — single static HTML file, no server, no JS)

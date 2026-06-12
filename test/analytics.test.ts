@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { UsageEvent } from '../src/schema.js'
-import { totals, byModel, byDay, byMonth, bySession, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
+import { totals, byModel, byDay, byMonth, bySession, idleGaps, toolUsage, hourlyHistogram, filterDays, filterMonth } from '../src/analytics.js'
 import { eventCost, cacheSavings, rateFor } from '../src/pricing.js'
 
 const ev = (over: Partial<UsageEvent>): UsageEvent => ({
@@ -140,5 +140,33 @@ describe('bySession', () => {
     const s = bySession(events)
     expect(s[0].gaps).toBe(2) // 10:00 → 11:30 and 11:30 → 11:45
     expect(s.find((x) => x.sessionId === 'small' && x.agent === 'claude-code')!.gaps).toBe(0)
+  })
+})
+
+describe('idleGaps', () => {
+  it('lists each >5min pause chronologically with minutes', () => {
+    const g = idleGaps([
+      ev({ timestamp: '2026-06-01T10:00:00.000Z' }),
+      ev({ timestamp: '2026-06-01T11:30:00.000Z' }),
+      ev({ timestamp: '2026-06-01T11:34:00.000Z' }), // 4min — under threshold
+      ev({ timestamp: '2026-06-01T11:45:00.000Z' }),
+    ])
+    expect(g).toHaveLength(2)
+    expect(g[0]).toEqual({ start: '2026-06-01T10:00:00.000Z', end: '2026-06-01T11:30:00.000Z', minutes: 90 })
+    expect(g[1].minutes).toBe(11)
+  })
+
+  it('agrees with bySession gap counts — same helper, same threshold', () => {
+    const big = [
+      ev({ sessionId: 'big', timestamp: '2026-06-01T10:00:00.000Z' }),
+      ev({ sessionId: 'big', timestamp: '2026-06-01T11:30:00.000Z' }),
+      ev({ sessionId: 'big', timestamp: '2026-06-01T11:45:00.000Z' }),
+    ]
+    expect(idleGaps(big)).toHaveLength(bySession(big)[0].gaps)
+  })
+
+  it('ignores invalid timestamps and tight sequences', () => {
+    expect(idleGaps([])).toHaveLength(0)
+    expect(idleGaps([ev({ timestamp: 'garbage' }), ev({ timestamp: '2026-06-01T10:00:00.000Z' })])).toHaveLength(0)
   })
 })

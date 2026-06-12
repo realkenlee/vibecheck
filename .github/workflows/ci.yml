@@ -31,3 +31,6 @@ jobs:
           ! node dist/cli.js --days 0
           ! node dist/cli.js --days banana
           ! node dist/cli.js --budget -5
+          ! node dist/cli.js doctr
+          ! node dist/cli.js --jsonn
+          ! node dist/cli.js sessions nosuchid --claude-dir /tmp/nope --codex-dir /tmp/nope

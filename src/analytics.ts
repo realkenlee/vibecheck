@@ -129,6 +129,32 @@ export function filterDays<T extends { timestamp: string }>(events: T[], days: n
 
 // ── session drill-down ────────────────────────────────────────────────────────
 
+/** A pause inside a session long enough to expire the prompt cache (5min TTL). */
+export interface IdleGap {
+  /** Last event before the pause. */
+  start: string
+  /** First event after it — this turn re-pays the cache rebuild. */
+  end: string
+  minutes: number
+}
+
+const GAP_MS = 5 * 60_000
+
+function gapList(times: string[]): IdleGap[] {
+  const sorted = [...times].sort()
+  const gaps: IdleGap[] = []
+  for (let i = 1; i < sorted.length; i++) {
+    const dt = new Date(sorted[i]).getTime() - new Date(sorted[i - 1]).getTime()
+    if (dt > GAP_MS) gaps.push({ start: sorted[i - 1], end: sorted[i], minutes: Math.round(dt / 60_000) })
+  }
+  return gaps
+}
+
+/** All >5min turn-to-turn pauses in the given events (chronological). Pass one session's events. */
+export function idleGaps(events: UsageEvent[]): IdleGap[] {
+  return gapList(events.map((e) => e.timestamp).filter((t) => !isNaN(new Date(t).getTime())))
+}
+
 export interface SessionSummary {
   sessionId: string
   agent: string
@@ -186,11 +212,7 @@ export function bySession(events: UsageEvent[]): SessionSummary[] {
     s.project = [...projects.entries()].sort((a, b) => b[1] - a[1])[0][0]
     const span = new Date(s.end).getTime() - new Date(s.start).getTime()
     s.minutes = isNaN(span) ? 0 : Math.round(span / 60_000)
-    times.sort()
-    for (let i = 1; i < times.length; i++) {
-      const dt = new Date(times[i]).getTime() - new Date(times[i - 1]).getTime()
-      if (dt > 5 * 60_000) s.gaps++
-    }
+    s.gaps = gapList(times).length
     out.push(s)
   }
   return out.sort((a, b) => b.cost - a.cost)

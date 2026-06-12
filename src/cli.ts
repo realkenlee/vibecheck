@@ -16,6 +16,7 @@ import {
   byDay,
   byMonth,
   bySession,
+  idleGaps,
   localDay,
   toolUsage,
   hourlyHistogram,
@@ -37,6 +38,8 @@ import { bold, dim, green, yellow, cyan, money, tokens, table, spark } from './f
 
 interface Args {
   command: 'report' | 'export' | 'sessions' | 'wrapped' | 'web' | 'months' | 'doctor'
+  /** `sessions <id>` — substring of a session id to drill into. */
+  sessionId: string | null
   json: boolean
   days: number | null
   month: string | null
@@ -58,6 +61,7 @@ function parseArgs(argv: string[]): Args {
   const envBudget = parseFloat(process.env.VIBECHECK_BUDGET ?? '')
   const a: Args = {
     command: 'report',
+    sessionId: null,
     json: false,
     days: null,
     month: null,
@@ -72,6 +76,7 @@ function parseArgs(argv: string[]): Args {
     const v = argv[i]
     if (i === 0 && (v === 'export' || v === 'sessions' || v === 'wrapped' || v === 'web' || v === 'months' || v === 'doctor'))
       a.command = v
+    else if (i === 1 && a.command === 'sessions' && !v.startsWith('-')) a.sessionId = v
     else if (v === '--json') a.json = true
     else if (v === '--days') {
       const n = Number(argv[++i])
@@ -103,7 +108,8 @@ function parseArgs(argv: string[]): Args {
 
 Usage: vibecheck [options]            personal report (human-readable)
        vibecheck doctor [options]     just the diagnosis — doctor's notes only
-       vibecheck sessions [options]   most expensive sessions
+       vibecheck sessions [id] [options]  most expensive sessions; give an id
+                                      (or any part of one) to drill into it
        vibecheck months               month-over-month trend
        vibecheck wrapped [options]    shareable card (--out wrapped.svg)
        vibecheck web [options]        static HTML dashboard (no server)
@@ -128,6 +134,11 @@ Export options (what you share is your call — read the payload first)
 All analysis is local. Nothing leaves your machine unless you share an export.`)
       process.exit(0)
     }
+    // Anything unrecognized fails loudly — `vibecheck doctr` must never quietly
+    // run the default report and look like an answer.
+    else if (i === 0 && !v.startsWith('-'))
+      fail(`unknown command: ${v}\nCommands: doctor, sessions, months, wrapped, web, export (default: report) — see --help`)
+    else fail(`unknown option: ${v} — see --help`)
   }
   return a
 }
@@ -285,6 +296,84 @@ function main() {
       ...s,
       compactions: s.agent === 'claude-code' ? (compactCount.get(s.sessionId) ?? 0) : 0,
     }))
+
+    if (args.sessionId) {
+      // drill into one session — match by any substring of the id, fail loudly otherwise
+      const q = args.sessionId
+      const matches = sessions.filter((s) => s.sessionId.includes(q))
+      if (matches.length === 0)
+        fail(`no session id contains "${q}" — ids are in the \`vibecheck sessions\` table`)
+      if (matches.length > 1)
+        fail(
+          `"${q}" matches ${matches.length} sessions — give more of the id:\n` +
+            matches
+              .slice(0, 5)
+              .map((s) => `  …${s.sessionId.slice(-8)}  ${localDay(s.start)}  ${s.project}`)
+              .join('\n'),
+        )
+      const s = matches[0]
+      const sev = events.filter((e) => e.agent === s.agent && e.sessionId === s.sessionId)
+      const gaps = idleGaps(sev)
+      const comps = s.agent === 'claude-code' ? compactions.filter((c) => c.sessionId === s.sessionId) : []
+      if (args.json) {
+        console.log(
+          JSON.stringify(
+            { ...s, gapList: gaps, compactionList: comps, byActivity: byActivity(sev), byModel: byModel(sev), tools: toolUsage(sev) },
+            null,
+            2,
+          ),
+        )
+        return
+      }
+      const span = s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`
+      console.log()
+      console.log(bold(`  🩺 vibecheck — session …${s.sessionId.slice(-8)}`))
+      console.log()
+      console.log(
+        `  ${bold(s.project)}  ·  ${cyan(s.agent)}  ·  ` +
+          `${localDay(s.start)}${localDay(s.end) !== localDay(s.start) ? ` → ${localDay(s.end)}` : ''}`,
+      )
+      console.log(`  ${span} span  ·  ${s.turns.toLocaleString('en-US')} turns  ·  ${tokens(s.tokens)} tokens  ·  ${bold(money(s.cost))}`)
+      console.log()
+      if (gaps.length) {
+        const longest = [...gaps].sort((a, b) => b.minutes - a.minutes).slice(0, 3)
+        console.log(bold('  Gaps') + dim(`  ·  ${gaps.length} pauses >5min — each one expires the prompt cache`))
+        for (const g of longest) {
+          const dur = g.minutes >= 60 ? `${Math.floor(g.minutes / 60)}h${String(g.minutes % 60).padStart(2, '0')}m` : `${g.minutes}m`
+          // a pause can cross days — without the end date "05:54 → 06:24" could be 48h
+          const endDay = localDay(g.end) !== localDay(g.start) ? `${localDay(g.end)} ` : ''
+          console.log(`    ${dur.padStart(7)}  ${dim(`${localDay(g.start)} ${localTime(g.start)} → ${endDay}${localTime(g.end)}`)}`)
+        }
+        console.log()
+      }
+      if (comps.length) {
+        const shed = comps.reduce((n, c) => n + Math.max(0, c.preTokens - c.postTokens), 0)
+        const auto = comps.filter((c) => c.trigger === 'auto').length
+        console.log(bold('  Compactions') + dim(`  ·  ${comps.length} (${auto} auto-forced)  ·  ~${tokens(shed)} tokens shed`))
+        console.log()
+      }
+      const acts = byActivity(sev)
+      if (acts.length) {
+        console.log(bold('  Where tokens went'))
+        console.log(
+          indent(
+            table(
+              acts.map((b) => [b.activity, String(b.events), tokens(b.tokens), money(b.cost), dim(`${Math.round(b.share * 100)}%`)]),
+              ['activity', 'turns', 'tokens', 'cost', 'share'],
+            ),
+          ),
+        )
+        console.log()
+      }
+      const stools = toolUsage(sev).slice(0, 8)
+      if (stools.length) {
+        console.log(bold('  Top tools'))
+        console.log(indent(table(stools.map(([name, n]) => [name, String(n)]), ['tool', 'calls'])))
+        console.log()
+      }
+      return
+    }
+
     if (args.json) {
       console.log(JSON.stringify(sessions, null, 2))
       return
@@ -301,6 +390,7 @@ function main() {
         table(
           sessions.slice(0, 15).map((s) => [
             dim(localDay(s.start)),
+            dim('…' + s.sessionId.slice(-8)),
             s.project,
             cyan(s.agent),
             s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`,
@@ -310,13 +400,14 @@ function main() {
             s.compactions > 0 ? String(s.compactions) : dim('—'),
             bold(money(s.cost)),
           ]),
-          ['date', 'project', 'agent', 'span', 'turns', 'tokens', 'gaps', 'compact', 'cost'],
+          ['date', 'id', 'project', 'agent', 'span', 'turns', 'tokens', 'gaps', 'compact', 'cost'],
         ),
       ),
     )
     console.log()
     console.log(dim(`  ${sessions.length} sessions total · top 15 shown · use --json for all`))
     console.log(dim(`  gaps = >5min pauses (each expires the prompt cache) · compact = context compactions`))
+    console.log(dim(`  drill in: vibecheck sessions <id> → longest gaps, compaction receipts, activity split`))
     console.log()
     return
   }
@@ -533,5 +624,12 @@ function main() {
 }
 
 const indent = (s: string) => s.replace(/^/gm, '  ')
+
+/** Local HH:MM for gap timestamps. */
+function localTime(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 main()
