@@ -40,3 +40,4 @@ jobs:
           ! node dist/cli.js sessions nosuchid --claude-dir /tmp/nope --codex-dir /tmp/nope
           ! node dist/cli.js --project
           ! node dist/cli.js --branch --json
+          ! node dist/cli.js --agent gemini

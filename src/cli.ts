@@ -50,6 +50,7 @@ interface Args {
   /** Scope everything to one project / git branch (substring match). */
   project: string | null
   branch: string | null
+  agent: string | null
   budget: number | null
   out: string | null
   anonymous: boolean
@@ -75,6 +76,7 @@ function parseArgs(argv: string[]): Args {
     month: null,
     project: null,
     branch: null,
+    agent: null,
     budget: isNaN(envBudget) ? null : envBudget,
     out: null,
     anonymous: false,
@@ -108,6 +110,11 @@ function parseArgs(argv: string[]): Args {
       a.branch = argv[++i]
       if (!a.branch || a.branch.startsWith('-')) fail('--branch wants a branch name (or any part of one)')
     }
+    else if (v === '--agent') {
+      a.agent = argv[++i]
+      if (a.agent !== 'claude-code' && a.agent !== 'codex')
+        fail(`--agent wants claude-code or codex, got: ${a.agent ?? '(nothing)'}`)
+    }
     else if (v === '--budget') {
       const b = Number(argv[++i])
       if (!Number.isFinite(b) || b <= 0) fail(`--budget wants a positive dollar amount, got: ${argv[i]}`)
@@ -139,6 +146,7 @@ Options
   --month <YYYY-MM>    only include one calendar month (reconciliation)
   --project <name>     only include one project (any part of the name works)
   --branch <name>      only include one git branch (Claude Code records branches)
+  --agent <name>       only include one agent: claude-code | codex
   --budget <usd>       monthly soft limit — burn-down + projection
                        (or set VIBECHECK_BUDGET)
   --json               machine-readable output (report mode)
@@ -172,6 +180,7 @@ function periodLabel(args: Args): string {
   let p = args.month ? args.month : args.days ? `last ${args.days} days` : 'all time'
   if (args.project) p += ` · project ${args.project}`
   if (args.branch) p += ` · branch ${args.branch}`
+  if (args.agent) p += ` · ${args.agent} only`
   return p
 }
 
@@ -217,7 +226,13 @@ function main() {
       fail(`--branch "${args.branch}" matches nothing` + (names ? ` — your branches: ${names}` : ' — only Claude Code records branches'))
     }
   }
-  if (args.project || args.branch) {
+  if (args.agent) {
+    const before = events
+    events = events.filter((e) => e.agent === args.agent)
+    if (events.length === 0 && before.length > 0)
+      fail(`--agent ${args.agent} matches nothing — agents in your data: ${topNames(before.map((e) => e.agent))}`)
+  }
+  if (args.project || args.branch || args.agent) {
     // compactions, file reads, and durations carry no project/branch — scope via surviving sessions
     const keep = new Set(events.map((e) => e.sessionId))
     compactions = compactions.filter((c) => keep.has(c.sessionId))
@@ -332,7 +347,7 @@ function main() {
       if (events.length === 0) {
         console.log('  No sessions found.')
         console.log(dim('  Looked in your Claude Code and Codex log dirs — point me elsewhere with'))
-        console.log(dim('  --claude-dir / --codex-dir, or widen an active filter (--days/--month/--project/--branch).'))
+        console.log(dim('  --claude-dir / --codex-dir, or widen an active filter (--days/--month/--project/--branch/--agent).'))
       } else {
         console.log(`  Nothing to diagnose yet — the doctor wants ≥50 turns and ≥$1 of usage`)
         console.log(`  before offering opinions (found ${events.length} turns).`)
@@ -366,7 +381,7 @@ function main() {
     // the card is built to be shared — say it's scoped, but never to what.
     // A month gets its human name: "June 2026" is the natural wrapped period.
     let period = args.month ? monthLabel(args.month) : args.days ? `last ${args.days} days` : 'all time'
-    if (args.project || args.branch) period += ' · filtered'
+    if (args.project || args.branch || args.agent) period += ' · filtered'
     if (args.json) {
       console.log(JSON.stringify(s, null, 2))
       return
@@ -573,7 +588,7 @@ function main() {
     console.log('  No sessions found.')
     console.log(dim(`  Looked in: ${args.claudeDir}`))
     console.log(dim(`             ${args.codexDir}`))
-    if (args.days || args.month || args.project || args.branch) {
+    if (args.days || args.month || args.project || args.branch || args.agent) {
       console.log()
       console.log(`  Your filter (${periodLabel(args)}) may be the reason — try without it.`)
     } else {

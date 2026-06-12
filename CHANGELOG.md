@@ -5,6 +5,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **`--agent claude-code|codex` filter** — completes the filter system: scope any command to one agent ("what is Codex actually costing me?"). Values are validated against the known agents; a filter matching nothing fails loudly with the agents present in your data. The shareable wrapped card says "filtered", never the agent name
 - [`docs/report-schema.md`](docs/report-schema.md) — the `vibecheck.report.v1` consumer contract: every field, its type and semantics, the additive-only versioning policy, and the misreadings consumers actually make (API-equivalent ≠ a bill; team agentHours can exceed wall-clock). A parity test asserts the doc and a maximal generated report agree on the field list
 
 ## [0.15.0] — 2026-06-12

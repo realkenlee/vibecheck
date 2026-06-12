@@ -92,6 +92,7 @@ npx vibe-check --days 30         # last 30 days
 npx vibe-check --month 2026-05   # one calendar month (reconciliation)
 npx vibe-check --project api     # scope everything to one project (any substring)
 npx vibe-check --branch q2-migration   # …or to one git branch — what did it cost?
+npx vibe-check --agent codex     # one agent only: claude-code | codex
 npx vibe-check months            # month-over-month trend with Δ%
 npx vibe-check --budget 200      # monthly soft limit → burn-down + projection
 npx vibe-check doctor            # just the diagnosis — doctor's notes only
