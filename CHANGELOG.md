@@ -2,7 +2,7 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.12.0] — 2026-06-12
 
 ### Added
 - [`docs/doctor-notes.md`](docs/doctor-notes.md) — the doctor's-notes **id vocabulary**: every stable id with its levels, exact thresholds, and meaning, so teams consuming `vibecheck export` can interpret `insights` without reading the source. A test asserts the table and `src/insights.ts` agree on the id list
