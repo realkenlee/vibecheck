@@ -247,8 +247,33 @@ function main() {
 
   if (args.command === 'months') {
     const months = byMonth(events).filter((m) => m.key !== 'unknown')
+    // per-month agent runtime + the rate it implies. Rate basis = claude-code
+    // cost only (the runtime basis); months under 1h get no rate — a 2-minute
+    // month "costing $38/h" is denominator noise, not a trend.
+    const monthMs = new Map<string, number>()
+    for (const td of turnDurations) {
+      const k = td.timestamp.slice(0, 7)
+      monthMs.set(k, (monthMs.get(k) ?? 0) + td.ms)
+    }
+    const runtime = (key: string): { hours: number; rate: number | null } | null => {
+      const h = (monthMs.get(key) ?? 0) / 3_600_000
+      if (h < 1) return null
+      const claudeCost = totals(
+        events.filter((e) => e.agent === 'claude-code' && e.timestamp.startsWith(key)),
+      ).cost
+      return { hours: h, rate: claudeCost > 0 ? claudeCost / h : null }
+    }
     if (args.json) {
-      console.log(JSON.stringify(months, null, 2))
+      console.log(
+        JSON.stringify(
+          months.map((m) => {
+            const r = runtime(m.key)
+            return { ...m, agentHours: r?.hours ?? null, costPerAgentHour: r?.rate ?? null }
+          }),
+          null,
+          2,
+        ),
+      )
       return
     }
     console.log()
@@ -273,9 +298,13 @@ function main() {
                     return d > 0 ? yellow(s) : green(s)
                   })()
                 : dim('—')
-            return [m.key, String(m.events), tokens(m.tokens), money(m.cost), delta]
+            const r = runtime(m.key)
+            const run = r
+              ? `${fmtHours(r.hours)}${r.rate ? dim(` ≈$${Math.round(r.rate)}/h`) : ''}`
+              : dim('—')
+            return [m.key, String(m.events), tokens(m.tokens), money(m.cost), delta, run]
           }),
-          ['month', 'calls', 'tokens', 'cost', 'Δ'],
+          ['month', 'calls', 'tokens', 'cost', 'Δ', 'agent runtime'],
         ),
       ),
     )

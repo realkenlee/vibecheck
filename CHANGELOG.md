@@ -6,6 +6,7 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ### Added
 - **Cost per agent-hour** — the rate your runtime implies, on the wrapped card, wrapped summary, and report vitals ("24h agent runtime (≈$12/h)"). The rate's cost basis is Claude Code only, matching the runtime basis — a big Codex bill can't inflate it. Appears only alongside the runtime stat, never alone
+- `months` gains an **agent runtime** column ("11h ≈$11/h") so the rate becomes a trend; `--json` carries `agentHours`/`costPerAgentHour`. Months under 1h of runtime show a dash — a 2-minute month "costing $38/h" is denominator noise, not a trend
 
 ## [0.14.0] — 2026-06-12
 
