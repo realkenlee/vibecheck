@@ -63,6 +63,19 @@ No Node? Locked-down laptop? Grab a **single-file executable** from
 [Releases](../../releases) (macOS arm64/x64, Linux x64/arm64, Windows) — no runtime,
 no dependencies, one artifact to checksum and allowlist.
 
+### No install at all — as a Claude Code skill
+
+You already have an agent that can read the logs. Install vibecheck as a [skill](skill/SKILL.md):
+
+```bash
+mkdir -p ~/.claude/skills/vibecheck && curl -fsSL https://raw.githubusercontent.com/realkenlee/vibecheck/main/skill/SKILL.md -o ~/.claude/skills/vibecheck/SKILL.md
+```
+
+Then ask Claude Code *"where do my AI tokens go?"* (or run `/vibecheck`). The skill encodes the
+same parsing rules this CLI is tested against — message-id dedupe, cache-subset splits, list
+prices — and instructs Claude to compute via a throwaway script, never by reading your logs
+into context. Same privacy contract: everything stays local.
+
 ## Usage
 
 ```bash

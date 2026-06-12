@@ -2,6 +2,11 @@
 
 All notable changes to vibecheck. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Zero-install Claude Code skill** ([`skill/SKILL.md`](skill/SKILL.md)) — encodes the full parsing spec (message-id dedupe, cache-subset split, list prices) so Claude Code can compute the report with no install at all. Validated: an implementation written from the spec alone matches the CLI's output exactly.
+
 ## [0.4.0] — 2026-06-11
 
 ### Changed
