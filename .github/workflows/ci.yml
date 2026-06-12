@@ -7,10 +7,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest]
         node: [18, 20, 22]
+        # We ship windows/macos binaries — the suite must pass where users run it.
+        include:
+          - { os: windows-latest, node: 22 }
+          - { os: macos-latest, node: 22 }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -21,6 +26,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: CLI smoke test (empty dirs)
+        shell: bash
         run: |
           node dist/cli.js --claude-dir /tmp/nope --codex-dir /tmp/nope
           node dist/cli.js doctor --claude-dir /tmp/nope --codex-dir /tmp/nope
@@ -29,6 +35,7 @@ jobs:
           # …and is rejected outside doctor (loud-validation rule)
           ! node dist/cli.js --fail-on-warn
       - name: CLI rejects bad input loudly (never silently $0)
+        shell: bash
         run: |
           ! node dist/cli.js --month 2026-13
           ! node dist/cli.js --month 13-2026

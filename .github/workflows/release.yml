@@ -65,3 +65,19 @@ jobs:
             --title "vibecheck ${GITHUB_REF_NAME}" \
             --generate-notes \
             --notes-file notes.md
+
+  # The .exe is cross-compiled on linux and would otherwise ship without ever
+  # having been executed on Windows. Run the released artifact where users will.
+  smoke-windows:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - name: Smoke-test the windows binary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" -p vibecheck-windows-x64.exe
+          ./vibecheck-windows-x64.exe --version
+          ./vibecheck-windows-x64.exe --claude-dir ./nope --codex-dir ./nope
+          ! ./vibecheck-windows-x64.exe --agent gemini
