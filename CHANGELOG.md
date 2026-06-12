@@ -4,6 +4,8 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-06-12
+
 ### Added
 - CI now tests on **Windows and macOS** (we ship binaries for both — the suite must pass where users run it), and every release **executes the windows .exe on a real Windows runner** before users do: it was cross-compiled on linux and had never actually been run on Windows
 
