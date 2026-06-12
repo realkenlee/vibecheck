@@ -2,7 +2,7 @@
 // port, no JS dependencies; everything is rendered at generation time. Your
 // data is private because the dashboard is just a file on your disk.
 
-import type { Compaction, FileRead, UsageEvent } from './schema.js'
+import type { Compaction, FileRead, TurnDuration, UsageEvent } from './schema.js'
 import {
   totals,
   byModel,
@@ -18,6 +18,7 @@ import {
 } from './analytics.js'
 import { byActivity } from './activities.js'
 import { diagnose } from './insights.js'
+import { fmtHours } from './wrapped.js'
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -52,6 +53,7 @@ export interface WebOptions {
   now?: Date
   compactions?: Compaction[]
   fileReads?: FileRead[]
+  turnDurations?: TurnDuration[]
 }
 
 export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): string {
@@ -76,12 +78,18 @@ export function dashboardHtml(events: UsageEvent[], opts: WebOptions = {}): stri
   const months = byMonth(events).filter((m) => m.key !== 'unknown')
   const branches = byBranch(events).filter((b) => b.key !== '(unknown)')
   const budget = opts.budget ? budgetStatus(events, opts.budget, opts.now) : null
+  // measured runtime, not wall-clock — parallel subagents each log their own turns
+  const runH = (opts.turnDurations ?? []).reduce((a, td) => a + td.ms, 0) / 3_600_000
 
   const vitals = `
 <div class="vitals">
   <div class="stat"><div class="big">${money(t.cost)}</div><div class="label">API-equivalent spend</div></div>
   <div class="stat"><div class="big">${fmtTokens(allTokens)}</div><div class="label">tokens</div></div>
-  <div class="stat"><div class="big">${t.sessions}</div><div class="label">sessions</div></div>
+  <div class="stat"><div class="big">${t.sessions}</div><div class="label">sessions</div></div>${
+    runH >= 1
+      ? `\n  <div class="stat"><div class="big">${fmtHours(runH)}</div><div class="label">agent runtime</div></div>`
+      : ''
+  }
   <div class="stat"><div class="big good">${money(t.cacheSavings)}</div><div class="label">saved by caching</div></div>
 </div>`
 

@@ -322,7 +322,7 @@ function main() {
   }
 
   if (args.command === 'web') {
-    const html = dashboardHtml(events, { days: args.days, period: periodLabel(args), budget: args.budget, compactions, fileReads })
+    const html = dashboardHtml(events, { days: args.days, period: periodLabel(args), budget: args.budget, compactions, fileReads, turnDurations })
     const path = args.out ?? join(tmpdir(), 'vibecheck.html')
     writeFileSync(path, html)
     console.log(`wrote ${path} — static file, no server, all data stays local`)
@@ -551,14 +551,18 @@ function main() {
 
   // ── vitals strip ──
   const allTokens = t.inputTokens + t.outputTokens + t.cacheReadTokens + t.cacheWriteTokens
+  const runH = turnDurations.reduce((a, td) => a + td.ms, 0) / 3_600_000
   console.log(
     '  ' +
       [
         `${bold(money(t.cost))} API-equivalent spend`,
         `${bold(tokens(allTokens))} tokens`,
         `${t.sessions} sessions`,
+        runH >= 1 ? `${bold(fmtHours(runH))} agent runtime` : null,
         green(`${money(t.cacheSavings)} saved by caching`),
-      ].join(dim('   │   ')),
+      ]
+        .filter(Boolean)
+        .join(dim('   │   ')),
   )
   console.log()
 

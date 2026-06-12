@@ -31,6 +31,6 @@
   <text x="800" y="420" class="big">22:00</text>
   <text x="800" y="454" class="label">peak coding hour</text>
   <text x="80" y="510" class="footer">mostly claude-opus-4-8   ·   41% editing   ·   biggest day 2026-06-03 ($39)</text>
-  <text x="80" y="542" class="footer">longest session 2,070 turns   ·   33 compactions survived</text>
+  <text x="80" y="542" class="footer">54h of agent runtime   ·   longest session 2,070 turns   ·   33 compactions survived</text>
   <text x="80" y="574" class="url">npx vibe-check · all data stays local</text>
 </svg>

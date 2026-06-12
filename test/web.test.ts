@@ -46,6 +46,15 @@ describe('web dashboard', () => {
     expect(scoped).not.toContain('all time')
   })
 
+  it('shows agent runtime only past an hour', () => {
+    const td = (ms: number) => ({ sessionId: 's1', timestamp: '2026-06-05T10:00:00.000Z', ms })
+    const withRuntime = dashboardHtml(events, { turnDurations: [td(8_280_000)] })
+    expect(withRuntime).toContain('2.3h')
+    expect(withRuntime).toContain('agent runtime')
+    expect(html).not.toContain('agent runtime') // no records (codex) -> tile absent
+    expect(dashboardHtml(events, { turnDurations: [td(1_500_000)] })).not.toContain('agent runtime')
+  })
+
   it('shows the months trend only when usage spans multiple months', () => {
     expect(html).not.toContain('By month') // both events in 2026-06
     const multi = dashboardHtml([ev({}), ev({ timestamp: '2026-05-05T10:00:00.000Z' })], {})

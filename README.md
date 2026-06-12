@@ -160,7 +160,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 108 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 109 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 
