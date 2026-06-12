@@ -62,6 +62,17 @@ describe('wrappedStats', () => {
     expect(wrappedStats(events, [], [td(3_600_000), td(1_800_000)]).agentHours).toBeCloseTo(1.5)
     expect(wrappedStats(events).agentHours).toBeNull() // no records (codex) -> null, not 0
   })
+
+  it('prices the agent-hour from claude-code cost only — the runtime basis', () => {
+    const td = [{ sessionId: 's1', timestamp: '2026-06-01T10:00:00.000Z', ms: 7_200_000 }]
+    // a huge codex event must not inflate the rate: codex logs no durations
+    const mixed = [...events, ev({ agent: 'codex', model: 'gpt-5.3-codex', outputTokens: 100_000_000 })]
+    const pure = wrappedStats(events, [], td)
+    const s = wrappedStats(mixed, [], td)
+    expect(s.costPerAgentHour).toBeCloseTo(pure.cost / 2, 2)
+    expect(s.costPerAgentHour).toBeLessThan(s.cost / 2) // total cost would overstate
+    expect(wrappedStats(events).costPerAgentHour).toBeNull() // no runtime -> no rate
+  })
 })
 
 describe('wrappedSvg', () => {
@@ -92,6 +103,7 @@ describe('wrappedSvg', () => {
     const td = (ms: number) => ({ sessionId: 's1', timestamp: '2026-06-05T10:00:00.000Z', ms })
     const svg = wrappedSvg(wrappedStats([ev({})], [], [td(8_280_000)]), 'all time')
     expect(svg).toContain('2.3h of agent runtime')
+    expect(svg).toMatch(/\(≈\$\d+\/h\)/) // the rate rides along
     // under an hour -> line absent (a "0.4h" brag is no brag)
     const quiet = wrappedSvg(wrappedStats([ev({})], [], [td(1_500_000)]), 'all time')
     expect(quiet).not.toContain('agent runtime')

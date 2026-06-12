@@ -28,6 +28,9 @@ export interface WrappedStats {
   /** Summed turn durations (Claude Code logs them; null when unrecorded).
    *  Parallel subagents each log their own turns — this is runtime, not wall-clock. */
   agentHours: number | null
+  /** API-equivalent cost per agent-hour — Claude Code cost only, since only
+   *  Claude Code records durations. Null when either side is unknown. */
+  costPerAgentHour: number | null
 }
 
 export function wrappedStats(
@@ -43,6 +46,9 @@ export function wrappedStats(
   const maxHour = Math.max(...hours)
   const busiest = [...days].sort((a, b) => b.cost - a.cost)[0]
   const longest = bySession(events).sort((a, b) => b.turns - a.turns)[0]
+  const agentHours = runMs(turnDurations)
+  // rate basis matches the runtime basis: claude-code cost only
+  const claudeCost = totals(events.filter((e) => e.agent === 'claude-code')).cost
 
   return {
     tokens: t.inputTokens + t.outputTokens + t.cacheReadTokens + t.cacheWriteTokens,
@@ -57,7 +63,8 @@ export function wrappedStats(
     peakHour: maxHour > 0 ? hours.indexOf(maxHour) : null,
     longestSessionTurns: longest ? longest.turns : null,
     compactions: compactions.length,
-    agentHours: runMs(turnDurations),
+    agentHours,
+    costPerAgentHour: agentHours && claudeCost > 0 ? claudeCost / agentHours : null,
   }
 }
 
@@ -116,7 +123,11 @@ export function wrappedSvg(s: WrappedStats, periodLabel: string): string {
     .join('   ·   ')
 
   const footer2 = [
-    s.agentHours && s.agentHours >= 1 ? `${fmtHours(s.agentHours)} of agent runtime` : null,
+    s.agentHours && s.agentHours >= 1
+      ? `${fmtHours(s.agentHours)} of agent runtime${
+          s.costPerAgentHour ? ` (≈$${Math.round(s.costPerAgentHour)}/h)` : ''
+        }`
+      : null,
     s.longestSessionTurns && s.longestSessionTurns >= 100
       ? `longest session ${s.longestSessionTurns.toLocaleString('en-US')} turns`
       : null,

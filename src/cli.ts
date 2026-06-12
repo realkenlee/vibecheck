@@ -354,7 +354,12 @@ function main() {
     console.log(`  ${bold(tokens(s.tokens))} tokens  ·  ${bold(money(s.cost))} API-equivalent  ·  ${green(money(s.cacheSavings) + ' saved by caching')}`)
     console.log(
       `  ${s.sessions} sessions over ${s.activeDays} active days  ·  longest streak ${bold(String(s.streak))} days` +
-        (s.agentHours && s.agentHours >= 1 ? dim(`  ·  ${fmtHours(s.agentHours)} agent runtime`) : ''),
+        (s.agentHours && s.agentHours >= 1
+          ? dim(
+              `  ·  ${fmtHours(s.agentHours)} agent runtime` +
+                (s.costPerAgentHour ? ` (≈$${Math.round(s.costPerAgentHour)}/h)` : ''),
+            )
+          : ''),
     )
     if (s.topModel) console.log(`  mostly ${cyan(s.topModel)}` + (s.topActivity ? dim(`  ·  ${Math.floor(s.topActivity.share * 100)}% ${s.topActivity.name}`) : ''))
     if (s.busiestDay) console.log(`  biggest day ${s.busiestDay.date} (${money(s.busiestDay.cost)})  ·  peak hour ${hour}`)
@@ -553,13 +558,18 @@ function main() {
   // ── vitals strip ──
   const allTokens = t.inputTokens + t.outputTokens + t.cacheReadTokens + t.cacheWriteTokens
   const runH = turnDurations.reduce((a, td) => a + td.ms, 0) / 3_600_000
+  // rate basis matches the runtime basis: claude-code cost only
+  const claudeCost = totals(events.filter((e) => e.agent === 'claude-code')).cost
   console.log(
     '  ' +
       [
         `${bold(money(t.cost))} API-equivalent spend`,
         `${bold(tokens(allTokens))} tokens`,
         `${t.sessions} sessions`,
-        runH >= 1 ? `${bold(fmtHours(runH))} agent runtime` : null,
+        runH >= 1
+          ? `${bold(fmtHours(runH))} agent runtime` +
+            (claudeCost > 0 ? dim(` (≈$${Math.round(claudeCost / runH)}/h)`) : '')
+          : null,
         green(`${money(t.cacheSavings)} saved by caching`),
       ]
         .filter(Boolean)
