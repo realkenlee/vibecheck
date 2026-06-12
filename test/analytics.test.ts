@@ -135,4 +135,10 @@ describe('bySession', () => {
     expect(big.minutes).toBe(105) // 10:00 → 11:45
     expect(big.project).toBe('beta') // 2 of 3 events
   })
+
+  it('counts >5min idle gaps per session', () => {
+    const s = bySession(events)
+    expect(s[0].gaps).toBe(2) // 10:00 → 11:30 and 11:30 → 11:45
+    expect(s.find((x) => x.sessionId === 'small' && x.agent === 'claude-code')!.gaps).toBe(0)
+  })
 })

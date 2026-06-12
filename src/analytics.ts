@@ -141,11 +141,13 @@ export interface SessionSummary {
   turns: number
   tokens: number
   cost: number
+  /** Turn-to-turn pauses >5min — each one lets the prompt cache expire. */
+  gaps: number
 }
 
 /** Per-session rollup, sorted by cost desc — "which sessions ate my budget". */
 export function bySession(events: UsageEvent[]): SessionSummary[] {
-  const map = new Map<string, { s: SessionSummary; projects: Map<string, number> }>()
+  const map = new Map<string, { s: SessionSummary; projects: Map<string, number>; times: string[] }>()
   for (const e of events) {
     const key = `${e.agent}:${e.sessionId}`
     let entry = map.get(key)
@@ -161,15 +163,18 @@ export function bySession(events: UsageEvent[]): SessionSummary[] {
           turns: 0,
           tokens: 0,
           cost: 0,
+          gaps: 0,
         },
         projects: new Map(),
+        times: [],
       }
       map.set(key, entry)
     }
-    const { s, projects } = entry
+    const { s, projects, times } = entry
     if (e.timestamp) {
       if (!s.start || e.timestamp < s.start) s.start = e.timestamp
       if (e.timestamp > s.end) s.end = e.timestamp
+      times.push(e.timestamp)
     }
     s.turns++
     s.tokens += e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
@@ -177,10 +182,15 @@ export function bySession(events: UsageEvent[]): SessionSummary[] {
     projects.set(e.project, (projects.get(e.project) ?? 0) + 1)
   }
   const out: SessionSummary[] = []
-  for (const { s, projects } of map.values()) {
+  for (const { s, projects, times } of map.values()) {
     s.project = [...projects.entries()].sort((a, b) => b[1] - a[1])[0][0]
     const span = new Date(s.end).getTime() - new Date(s.start).getTime()
     s.minutes = isNaN(span) ? 0 : Math.round(span / 60_000)
+    times.sort()
+    for (let i = 1; i < times.length; i++) {
+      const dt = new Date(times[i]).getTime() - new Date(times[i - 1]).getTime()
+      if (dt > 5 * 60_000) s.gaps++
+    }
     out.push(s)
   }
   return out.sort((a, b) => b.cost - a.cost)

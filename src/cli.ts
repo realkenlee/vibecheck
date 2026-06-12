@@ -273,7 +273,13 @@ function main() {
   }
 
   if (args.command === 'sessions') {
-    const sessions = bySession(events)
+    // per-session compaction counts (Claude Code only — codex doesn't log them)
+    const compactCount = new Map<string, number>()
+    for (const c of compactions) compactCount.set(c.sessionId, (compactCount.get(c.sessionId) ?? 0) + 1)
+    const sessions = bySession(events).map((s) => ({
+      ...s,
+      compactions: s.agent === 'claude-code' ? (compactCount.get(s.sessionId) ?? 0) : 0,
+    }))
     if (args.json) {
       console.log(JSON.stringify(sessions, null, 2))
       return
@@ -295,14 +301,17 @@ function main() {
             s.minutes >= 60 ? `${Math.floor(s.minutes / 60)}h${s.minutes % 60}m` : `${s.minutes}m`,
             String(s.turns),
             tokens(s.tokens),
+            s.gaps > 0 ? String(s.gaps) : dim('—'),
+            s.compactions > 0 ? String(s.compactions) : dim('—'),
             bold(money(s.cost)),
           ]),
-          ['date', 'project', 'agent', 'span', 'turns', 'tokens', 'cost'],
+          ['date', 'project', 'agent', 'span', 'turns', 'tokens', 'gaps', 'compact', 'cost'],
         ),
       ),
     )
     console.log()
     console.log(dim(`  ${sessions.length} sessions total · top 15 shown · use --json for all`))
+    console.log(dim(`  gaps = >5min pauses (each expires the prompt cache) · compact = context compactions`))
     console.log()
     return
   }
