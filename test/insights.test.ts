@@ -77,6 +77,35 @@ describe("doctor's notes", () => {
     expect(notes.some((n) => n.text.includes('of all spend'))).toBe(true)
   })
 
+  it('warns on context tax in marathon sessions', () => {
+    // one 120-turn session, 1min apart (no idle gaps): early turns read ~1k
+    // cached tokens, turns 100+ read 30M — late turns re-pay the whole history
+    const at = (i: number) => new Date(Date.UTC(2026, 5, 5, 10, i)).toISOString()
+    const events = Array.from({ length: 120 }, (_, i) =>
+      ev({
+        sessionId: 'marathon',
+        timestamp: at(i),
+        cacheReadTokens: i < 25 ? 1_000 : i >= 100 ? 30_000_000 : 1_000_000,
+      }),
+    )
+    const notes = diagnose(events)
+    const tax = notes.find((n) => n.text.includes('Context tax'))
+    expect(tax?.level).toBe('warn') // tax dominates total cost here
+    expect(tax?.text).toContain('1 session ran past 100 turns')
+  })
+
+  it('flags idle gaps that expire the prompt cache', () => {
+    // 60 turns spaced 6min apart → every turn follows a >5min gap and re-writes
+    // 3M tokens of cache; short session (<100 turns) so no context-tax overlap
+    const at = (i: number) => new Date(Date.UTC(2026, 5, 5, 10, i * 6)).toISOString()
+    const events = Array.from({ length: 60 }, (_, i) =>
+      ev({ sessionId: 'gappy', timestamp: at(i), cacheWriteTokens: 3_000_000 }),
+    )
+    const notes = diagnose(events)
+    const gaps = notes.find((n) => n.text.includes('idle gaps >5min'))
+    expect(gaps?.level).toBe('info')
+  })
+
   it('calls out night-owl usage and sorts warns first', () => {
     // build night timestamps via local-time Date so the test is TZ-independent
     const d = new Date(2026, 5, 5, 2, 0, 0)

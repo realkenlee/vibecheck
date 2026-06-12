@@ -93,6 +93,55 @@ export function diagnose(events: UsageEvent[]): Insight[] {
     })
   }
 
+  // 6. Context tax — a session re-pays its whole history every turn, so late
+  // turns in marathon sessions cost multiples of early ones. Estimate the
+  // excess cache reads past turn 100 vs each session's own early baseline.
+  const sessionsSorted = groupSessions(events)
+  let marathons = 0
+  let tax = 0
+  let earlySum = 0, earlyN = 0, lateSum = 0, lateN = 0
+  for (const turns of sessionsSorted.values()) {
+    if (turns.length < 100) continue
+    marathons++
+    const base = turns.slice(0, 25)
+    const baseline = base.reduce((a, e) => a + e.cacheReadTokens, 0) / base.length
+    earlySum += baseline * base.length; earlyN += base.length
+    for (let i = 100; i < turns.length; i++) {
+      const r = rateFor(turns[i].model)
+      if (!r) continue
+      lateSum += turns[i].cacheReadTokens; lateN++
+      tax += (Math.max(0, turns[i].cacheReadTokens - baseline) * r.cacheRead) / 1_000_000
+    }
+  }
+  if (marathons > 0 && tax > 5) {
+    const k = (x: number) => `${Math.round(x / 1000)}k`
+    out.push({
+      level: tax / t.cost > 0.2 ? 'warn' : 'info',
+      text: `Context tax: ${marathons} session${marathons > 1 ? 's' : ''} ran past 100 turns — late turns re-read ~${k(lateSum / Math.max(1, lateN))} cached tokens apiece vs ~${k(earlySum / Math.max(1, earlyN))} early, ≈ ${usd(tax)} of pure re-reading. Context is rent, not a purchase: /compact or restart between tasks.`,
+    })
+  }
+
+  // 7. Idle gaps — the prompt cache expires after ~5min; coming back means
+  // re-writing it at the 1.25× premium. Post-gap cache writes approximate that.
+  let gapCount = 0
+  let gapCost = 0
+  for (const turns of sessionsSorted.values()) {
+    for (let i = 1; i < turns.length; i++) {
+      const dt = new Date(turns[i].timestamp).getTime() - new Date(turns[i - 1].timestamp).getTime()
+      if (!(dt > 5 * 60_000)) continue
+      const r = rateFor(turns[i].model)
+      if (!r) continue
+      gapCount++
+      gapCost += (turns[i].cacheWriteTokens * r.cacheWrite) / 1_000_000
+    }
+  }
+  if (gapCount >= 10 && gapCost > 2) {
+    out.push({
+      level: 'info',
+      text: `${gapCount} idle gaps >5min inside sessions let the prompt cache expire — post-gap turns re-wrote it for ≈ ${usd(gapCost)}. Wrap up before stepping away, or expect a rebuild on return.`,
+    })
+  }
+
   // 5. Night-owl vitals.
   const hours = hourlyHistogram(events)
   const night = hours.slice(0, 5).reduce((a, b) => a + b, 0)
@@ -105,6 +154,19 @@ export function diagnose(events: UsageEvent[]): Insight[] {
   }
 
   return out.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
+}
+
+// events per session in timestamp order — for turn-position economics
+function groupSessions(events: UsageEvent[]): Map<string, UsageEvent[]> {
+  const map = new Map<string, UsageEvent[]>()
+  for (const e of events) {
+    const key = `${e.agent}:${e.sessionId}`
+    let arr = map.get(key)
+    if (!arr) map.set(key, (arr = []))
+    arr.push(e)
+  }
+  for (const arr of map.values()) arr.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+  return map
 }
 
 // cost share per activity without importing the CLI's table shape

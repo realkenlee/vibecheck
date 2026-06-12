@@ -5,6 +5,8 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- Doctor's note for **context tax** — sessions past 100 turns re-pay their whole history as cache reads every turn; quantifies the excess vs each session's own early baseline ("context is rent, not a purchase")
+- Doctor's note for **idle gaps** — >5min pauses inside sessions expire the prompt cache; counts the gaps and prices the post-gap cache rebuilds
 - **Zero-install Claude Code skill** ([`skill/SKILL.md`](skill/SKILL.md)) — encodes the full parsing spec (message-id dedupe, cache-subset split, list prices) so Claude Code can compute the report with no install at all. Validated: an implementation written from the spec alone matches the CLI's output exactly.
 
 ## [0.4.0] — 2026-06-11
