@@ -68,6 +68,19 @@ describe('web dashboard', () => {
     expect(dashboardHtml(many, {})).not.toContain('auto-forced')
   })
 
+  it("threads file reads into the doctor's notes", () => {
+    const many = Array.from({ length: 60 }, (_, i) => ev({ sessionId: `s${i % 7}` }))
+    const reads = Array.from({ length: 60 }, () => ({
+      sessionId: 's0',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      file: 'main.py',
+      bytes: 5000,
+    }))
+    const withR = dashboardHtml(many, { fileReads: reads })
+    expect(withR).toContain('Re-read tax')
+    expect(dashboardHtml(many, {})).not.toContain('Re-read tax')
+  })
+
   it('escapes hostile names everywhere', () => {
     const hostile = dashboardHtml(
       [ev({ project: '<img src=x onerror=alert(1)>', model: '"><script>', gitBranch: '<b>' })],

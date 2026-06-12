@@ -30,6 +30,21 @@ export interface UsageEvent {
   gitBranch: string | null
 }
 
+/**
+ * One Read-tool invocation (Claude Code only). `file` is the BASENAME only —
+ * full paths never leave the parser, and these records are used solely by
+ * local surfaces (report/doctor/web); `export` and `wrapped` never see them.
+ */
+export interface FileRead {
+  sessionId: string
+  /** ISO 8601 */
+  timestamp: string
+  /** Basename of the file read — never the full path. */
+  file: string
+  /** Bytes the read returned (0 if the result never arrived). */
+  bytes: number
+}
+
 /** A context compaction recorded by the agent (Claude Code `compact_boundary`). */
 export interface Compaction {
   sessionId: string
@@ -54,4 +69,6 @@ export interface ParseResult {
   stats: ParseStats
   /** Compaction events, when the agent records them (Claude Code only). */
   compactions?: Compaction[]
+  /** Read-tool invocations, when the agent records them (Claude Code only). */
+  fileReads?: FileRead[]
 }

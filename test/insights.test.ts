@@ -169,6 +169,44 @@ describe("doctor's notes", () => {
     expect(notes.some((n) => n.text.includes('auto-forced'))).toBe(false)
   })
 
+  it('reports the re-read tax when one session keeps re-reading a file', () => {
+    // 60 reads of main.py in one session, 5KB each -> 59 repeats, ~295KB
+    const reads = Array.from({ length: 60 }, () => ({
+      sessionId: 's1',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      file: 'main.py',
+      bytes: 5000,
+    }))
+    const notes = diagnose(fill(100), [], reads)
+    const n = notes.find((x) => x.text.includes('Re-read tax'))
+    expect(n?.level).toBe('warn') // 60 reads of one file in one session is past the warn bar
+    expect(n?.text).toContain('59 repeat file reads')
+    expect(n?.text).toContain('main.py')
+    expect(n?.text).toContain('60× in one session')
+  })
+
+  it('stays quiet when each session reads the file once (normal behavior)', () => {
+    const reads = Array.from({ length: 100 }, (_, i) => ({
+      sessionId: `s${i}`,
+      timestamp: '2026-06-05T10:00:00.000Z',
+      file: 'main.py',
+      bytes: 50_000,
+    }))
+    const notes = diagnose(fill(100), [], reads)
+    expect(notes.some((x) => x.text.includes('Re-read tax'))).toBe(false)
+  })
+
+  it('stays quiet when repeats are plentiful but tiny (below the 200KB floor)', () => {
+    const reads = Array.from({ length: 80 }, () => ({
+      sessionId: 's1',
+      timestamp: '2026-06-05T10:00:00.000Z',
+      file: 'main.py',
+      bytes: 100,
+    }))
+    const notes = diagnose(fill(100), [], reads)
+    expect(notes.some((x) => x.text.includes('Re-read tax'))).toBe(false)
+  })
+
   it('calls out night-owl usage and sorts warns first', () => {
     // build night timestamps via local-time Date so the test is TZ-independent
     const d = new Date(2026, 5, 5, 2, 0, 0)

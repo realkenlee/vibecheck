@@ -12,16 +12,16 @@ describe('claude-code parser', () => {
   const r = parseClaudeLines(lines('claude-code.jsonl'), 'fixture-session')
 
   it('dedupes streamed duplicate message ids (the double-count trap)', () => {
-    // 4 assistant records with usage, but msg_dup appears twice and
-    // <synthetic> is excluded -> 3 events
-    expect(r.events).toHaveLength(3)
+    // 6 assistant records with usage, but msg_dup appears twice and
+    // <synthetic> is excluded -> 5 events
+    expect(r.events).toHaveLength(5)
     const dup = r.events.filter((e) => e.inputTokens === 100)
     expect(dup).toHaveLength(1)
   })
 
   it('unions tool calls across duplicate lines', () => {
     const dup = r.events.find((e) => e.inputTokens === 100)!
-    expect(dup.toolCalls).toEqual(['Bash'])
+    expect(dup.toolCalls).toEqual(['Bash', 'Read'])
   })
 
   it('extracts usage including cache fields', () => {
@@ -68,6 +68,23 @@ describe('claude-code parser', () => {
   it('counts errored tool results per turn', () => {
     expect(r.events.find((e) => e.model === 'claude-opus-4-8')!.toolErrors).toBe(1)
     expect(r.events.find((e) => e.inputTokens === 100)!.toolErrors).toBe(0)
+  })
+
+  it('records Read calls as FileReads with basename only, never the path', () => {
+    // r4 (only on the streamed-duplicate line), r1, r2 — r3 and t2 have no
+    // file_path and are ignored
+    expect(r.fileReads).toHaveLength(3)
+    for (const fr of r.fileReads!) {
+      expect(fr.file).toBe('main.py')
+      expect(fr.file).not.toContain('/')
+      expect(fr.sessionId).toBe('fixture-session')
+    }
+  })
+
+  it('attributes result bytes to each FileRead (0 when no result arrived)', () => {
+    const bytes = r.fileReads!.map((fr) => fr.bytes).sort((a, b) => a - b)
+    // r4 got no tool_result; r1 and r2 each returned "def main():\n    pass"
+    expect(bytes).toEqual([0, 'def main():\n    pass'.length, 'def main():\n    pass'.length])
   })
 
   it('extracts compact_boundary records with their token receipts', () => {

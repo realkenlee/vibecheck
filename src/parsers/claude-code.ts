@@ -19,7 +19,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, basename } from 'node:path'
-import type { Compaction, ParseResult, UsageEvent } from '../schema.js'
+import type { Compaction, FileRead, ParseResult, UsageEvent } from '../schema.js'
 
 interface ClaudeUsage {
   input_tokens?: number
@@ -45,6 +45,10 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
   // tool_use id -> event, so results (which arrive on later `user` lines) attribute back
   const byToolUse = new Map<string, UsageEvent>()
   const compactions: Compaction[] = []
+  // Read-tool calls: tool_use id -> record, so result sizes attribute per file.
+  // Only the BASENAME is kept — full paths never leave this function.
+  const fileReads: FileRead[] = []
+  const byReadId = new Map<string, FileRead>()
   let skippedLines = 0
   let anonCounter = 0
 
@@ -79,9 +83,12 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
         for (const c of content as { type?: string; tool_use_id?: string; content?: unknown; is_error?: boolean }[]) {
           if (c.type !== 'tool_result' || !c.tool_use_id) continue
           const ev = byToolUse.get(c.tool_use_id)
-          if (!ev) continue
-          ev.toolResultBytes = (ev.toolResultBytes ?? 0) + resultLength(c.content)
-          if (c.is_error) ev.toolErrors = (ev.toolErrors ?? 0) + 1
+          if (ev) {
+            ev.toolResultBytes = (ev.toolResultBytes ?? 0) + resultLength(c.content)
+            if (c.is_error) ev.toolErrors = (ev.toolErrors ?? 0) + 1
+          }
+          const fr = byReadId.get(c.tool_use_id)
+          if (fr) fr.bytes += resultLength(c.content)
         }
       }
       continue
@@ -96,11 +103,21 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
 
     const u = msg.usage
     const toolUses = Array.isArray(msg.content)
-      ? (msg.content as { type?: string; name?: string; id?: string }[]).filter(
+      ? (msg.content as { type?: string; name?: string; id?: string; input?: { file_path?: unknown } }[]).filter(
           (c) => c.type === 'tool_use' && c.name,
         )
       : []
     const toolCalls = toolUses.map((c) => c.name as string)
+    const timestamp = typeof d.timestamp === 'string' ? d.timestamp : ''
+    // Read calls become FileRead records (dedupe by tool_use id — the same
+    // call can appear on multiple streamed lines of the same message)
+    for (const c of toolUses) {
+      if (c.name !== 'Read' || !c.id || byReadId.has(c.id)) continue
+      if (typeof c.input?.file_path !== 'string' || !c.input.file_path) continue
+      const fr: FileRead = { sessionId, timestamp, file: basename(c.input.file_path), bytes: 0 }
+      fileReads.push(fr)
+      byReadId.set(c.id, fr)
+    }
 
     const id = msg.id ?? `anon-${anonCounter++}`
     const prev = byId.get(id)
@@ -114,7 +131,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
       agent: 'claude-code',
       sessionId,
       project: typeof d.cwd === 'string' && d.cwd ? basename(d.cwd) : 'unknown',
-      timestamp: typeof d.timestamp === 'string' ? d.timestamp : '',
+      timestamp,
       model,
       inputTokens: u.input_tokens ?? 0,
       outputTokens: u.output_tokens ?? 0,
@@ -135,6 +152,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
     events,
     stats: { files: 1, sessions: 1, events: events.length, skippedLines },
     compactions,
+    fileReads,
   }
 }
 
@@ -142,6 +160,7 @@ export function parseClaudeLines(lines: Iterable<string>, sessionId: string): Pa
 export function parseClaudeDir(root: string): ParseResult {
   const events: UsageEvent[] = []
   const compactions: Compaction[] = []
+  const fileReads: FileRead[] = []
   let files = 0
   let skippedLines = 0
   const sessions = new Set<string>()
@@ -153,12 +172,14 @@ export function parseClaudeDir(root: string): ParseResult {
     const r = parseClaudeLines(readFileSync(path, 'utf8').split('\n'), sessionId)
     events.push(...r.events)
     compactions.push(...(r.compactions ?? []))
+    fileReads.push(...(r.fileReads ?? []))
     skippedLines += r.stats.skippedLines
   }
   return {
     events,
     stats: { files, sessions: sessions.size, events: events.length, skippedLines },
     compactions,
+    fileReads,
   }
 }
 

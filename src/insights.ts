@@ -1,7 +1,7 @@
 // Doctor's notes — turn the numbers into a diagnosis. Every heuristic is
 // deterministic, threshold-gated, and only fires with enough data to matter.
 
-import type { Compaction, UsageEvent } from './schema.js'
+import type { Compaction, FileRead, UsageEvent } from './schema.js'
 import { eventCost, rateFor } from './pricing.js'
 import { totals, bySession, hourlyHistogram } from './analytics.js'
 import { classifyEvent, type Activity } from './activities.js'
@@ -20,7 +20,11 @@ const usd = (x: number) => `$${x >= 100 ? Math.round(x) : x.toFixed(2)}`
 const MIN_EVENTS = 50
 const MIN_COST = 1
 
-export function diagnose(events: UsageEvent[], compactions: Compaction[] = []): Insight[] {
+export function diagnose(
+  events: UsageEvent[],
+  compactions: Compaction[] = [],
+  fileReads: FileRead[] = [],
+): Insight[] {
   const t = totals(events)
   if (t.events < MIN_EVENTS || t.cost < MIN_COST) return []
 
@@ -226,6 +230,38 @@ export function diagnose(events: UsageEvent[], compactions: Compaction[] = []): 
     out.push({
       level: 'info',
       text: `${label} compactions were auto-forced at the context ceiling — each shed ~${Math.round(shed / autoC.length / 1000)}k tokens you'd been re-paying every turn. A /compact between tasks captures that earlier, on your terms.`,
+    })
+  }
+
+  // 12. Re-read tax — the same file read again in the same session re-enters
+  // context in full and is then re-paid as cache reads every later turn.
+  // A "repeat" = reads of one file within one session, beyond the first.
+  // (FileRead carries basenames only — see schema.ts — and notes render on
+  // local surfaces only; export/wrapped never include them.)
+  const perSessionFile = new Map<string, { file: string; reads: number; bytes: number }>()
+  for (const fr of fileReads) {
+    const key = `${fr.sessionId} ${fr.file}`
+    const rec = perSessionFile.get(key) ?? { file: fr.file, reads: 0, bytes: 0 }
+    rec.reads++
+    rec.bytes += fr.bytes
+    perSessionFile.set(key, rec)
+  }
+  let repeats = 0
+  let repeatBytes = 0
+  let top: { file: string; reads: number } | null = null
+  for (const rec of perSessionFile.values()) {
+    if (rec.reads < 2) continue
+    repeats += rec.reads - 1
+    // bytes attributable to the repeats, assuming roughly equal-sized reads
+    repeatBytes += Math.floor((rec.bytes * (rec.reads - 1)) / rec.reads)
+    if (!top || rec.reads > top.reads) top = { file: rec.file, reads: rec.reads }
+  }
+  if (top && repeats >= 50 && repeatBytes >= 200_000) {
+    const kb = Math.floor(repeatBytes / 1024)
+    const size = kb >= 1024 ? `${(Math.floor(kb / 102.4) / 10).toFixed(1)}MB` : `${kb}KB`
+    out.push({
+      level: kb >= 1024 || top.reads >= 25 ? 'warn' : 'info',
+      text: `Re-read tax: ${repeats} repeat file reads inside sessions (~${size} re-entering context) — ${top.file} alone was read ${top.reads}× in one session. Repeats are re-paid as cache reads every later turn; line-range reads and smaller files keep the rent down.`,
     })
   }
 

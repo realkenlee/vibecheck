@@ -143,6 +143,9 @@ function main() {
   let compactions = claude.compactions ?? []
   if (args.days) compactions = filterDays(compactions, args.days)
   if (args.month) compactions = filterMonth(compactions, args.month)
+  let fileReads = claude.fileReads ?? []
+  if (args.days) fileReads = filterDays(fileReads, args.days)
+  if (args.month) fileReads = filterMonth(fileReads, args.month)
 
   if (args.command === 'export') {
     const report = teamReport(events, {
@@ -200,7 +203,7 @@ function main() {
   }
 
   if (args.command === 'doctor') {
-    const notes = diagnose(events, compactions)
+    const notes = diagnose(events, compactions, fileReads)
     if (args.json) {
       console.log(JSON.stringify(notes, null, 2))
       return
@@ -234,7 +237,7 @@ function main() {
   }
 
   if (args.command === 'web') {
-    const html = dashboardHtml(events, { days: args.days, budget: args.budget, compactions })
+    const html = dashboardHtml(events, { days: args.days, budget: args.budget, compactions, fileReads })
     const path = args.out ?? join(tmpdir(), 'vibecheck.html')
     writeFileSync(path, html)
     console.log(`wrote ${path} — static file, no server, all data stays local`)
@@ -317,7 +320,7 @@ function main() {
           byDay: byDay(events),
           tools: toolUsage(events),
           hourly: hourlyHistogram(events),
-          insights: diagnose(events, compactions),
+          insights: diagnose(events, compactions, fileReads),
           budget: args.budget ? budgetStatus(events, args.budget) : null,
           parseStats: { claude: claude.stats, codex: codex.stats },
         },
@@ -490,7 +493,7 @@ function main() {
   }
 
   // ── doctor's notes ──
-  const notes = diagnose(events, compactions)
+  const notes = diagnose(events, compactions, fileReads)
   if (notes.length) {
     console.log(bold("  Doctor's notes"))
     for (const n of notes) {

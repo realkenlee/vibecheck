@@ -36,6 +36,8 @@ npx vibe-check
   ⚠ Context tax: 6 sessions ran past 100 turns — late turns re-read ~109k cached
     tokens apiece vs ~29k early, ≈ $84 of pure re-reading. Context is rent,
     not a purchase: /compact or restart between tasks.
+  ⚠ Re-read tax: 351 repeat file reads inside sessions (~1.5MB re-entering
+    context) — main.py alone was read 85× in one session.
   · All 32 compactions were auto-forced at the context ceiling — each shed ~155k
     tokens you'd been re-paying every turn.
   · 44% of spend is command-running turns. Verbose build/test output is
@@ -148,7 +150,7 @@ Parsers are the product, so everything is fixture-tested:
 
 ```bash
 npm install
-npm test        # 78 tests over synthetic fixtures encoding every schema gotcha
+npm test        # 85 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 
@@ -159,7 +161,7 @@ npm run dev     # build + run against your own sessions
 - [x] Branch-level cost attribution
 - [x] Aggregates-only team export
 - [x] Session drill-down (`vibecheck sessions`)
-- [x] Doctor's notes (actionable diagnosis: cache health, context tax, idle gaps, compaction receipts, failure tax, verbosity drift)
+- [x] Doctor's notes (actionable diagnosis: cache health, context tax, idle gaps, compaction receipts, re-read tax, failure tax, verbosity drift)
 - [x] "AI Coding Wrapped" shareable card (`vibecheck wrapped`, SVG, aggregates only)
 - [x] Local dashboard (`vibecheck web` — single static HTML file, no server, no JS)
 - [ ] Gemini CLI, Cursor, opencode parsers
