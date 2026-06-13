@@ -4,6 +4,9 @@ All notable changes to vibecheck. Format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Changed
+- README roadmap now lists all shipped features (agent runtime, cost per agent-hour, `--agent`/`--project`/`--branch` filters, `months` trend, `export` schema); development section notes Windows/macOS CI and per-release `.exe` smoke
+
 ## [0.18.0] — 2026-06-12
 
 ### Added

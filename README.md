@@ -93,7 +93,7 @@ npx vibe-check --month 2026-05   # one calendar month (reconciliation)
 npx vibe-check --project api     # scope everything to one project (any substring)
 npx vibe-check --branch q2-migration   # …or to one git branch — what did it cost?
 npx vibe-check --agent codex     # one agent only: claude-code | codex
-npx vibe-check months            # month-over-month trend with Δ%
+npx vibe-check months            # month-over-month spend + agent runtime trend with Δ%
 npx vibe-check --budget 200      # monthly soft limit → burn-down + projection
 npx vibe-check doctor            # just the diagnosis — doctor's notes only
 npx vibe-check doctor --fail-on-warn   # exit 1 on any ⚠ note — CI hygiene gate
@@ -165,14 +165,18 @@ npm test        # 112 tests over synthetic fixtures encoding every schema gotcha
 npm run dev     # build + run against your own sessions
 ```
 
+CI runs on linux/macos/windows across Node 18/20/22. Every release also executes the Windows `.exe` on a real Windows runner before it ships.
+
 ## Roadmap
 
 - [x] Activity attribution ("where tokens go")
 - [x] Budget burn-down with month-end projection
-- [x] Branch-level cost attribution
-- [x] Aggregates-only team export
+- [x] Branch-level cost attribution (`--branch`, `--project`, `--agent` filters)
+- [x] Month-over-month spend trend (`vibecheck months`, Δ%)
+- [x] Aggregates-only team export (`vibecheck export`, `vibecheck.report.v1` schema)
 - [x] Session drill-down (`vibecheck sessions`, per-session detail via `sessions <id>`)
 - [x] Doctor's notes (actionable diagnosis: cache health, context tax, idle gaps, compaction receipts, re-read tax, failure tax, verbosity drift)
+- [x] Agent runtime from `turn_duration` records — how long the agent actually worked, not wall-clock; cost per agent-hour; monthly runtime trend
 - [x] "AI Coding Wrapped" shareable card (`vibecheck wrapped`, SVG, aggregates only)
 - [x] Local dashboard (`vibecheck web` — single static HTML file, no server, no JS)
 - [ ] Gemini CLI, Cursor, opencode parsers
